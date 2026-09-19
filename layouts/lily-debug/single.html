@@ -1,0 +1,101 @@
+{{ define "main" }}
+{{- if not hugo.IsDevelopment -}}
+<section class="lily-debug lily-debug--off">
+  <h1>Lily Debug</h1>
+  <p>此页面仅在开发环境（hugo server）可见。</p>
+</section>
+{{- else -}}
+{{- $kind := partial "lily/utils/kind.html" (dict "page" .) -}}
+{{- $layoutData := index hugo.Data.lily.layouts $kind -}}
+<section class="lily-debug">
+  <style>
+    .lily-debug { max-width: var(--readw, 860px); margin: 0 auto; }
+    .lily-debug h1 { font-family: var(--lily-font-heading); margin: 2rem 0 .5rem; }
+    .lily-debug h2 { font-family: var(--lily-font-heading); font-size: 1.2rem; margin: 1.75rem 0 .6rem; border-bottom: 1px solid var(--lily-color-border); padding-bottom: .3rem; }
+    .lily-debug table { width: 100%; border-collapse: collapse; font-size: .82rem; margin: .5rem 0 1rem; }
+    .lily-debug th, .lily-debug td { border: 1px solid var(--lily-color-border-light); padding: .35rem .5rem; text-align: left; vertical-align: top; }
+    .lily-debug th { background: var(--lily-bg-hover); white-space: nowrap; }
+    .lily-debug code { background: var(--lily-bg-code); border-radius: 4px; padding: .1em .3em; font-size: .85em; }
+    .lily-debug pre { background: var(--lily-bg-code); border: 1px solid var(--lily-color-border-light); border-radius: var(--lily-radius-sm); padding: .8rem; overflow: auto; font-size: .75rem; line-height: 1.5; }
+    .lily-debug .pill { border-radius: 999px; padding: .1rem .5rem; font-size: .72rem; margin-right: .3rem; }
+    .lily-debug .pill--ok { background: color-mix(in srgb, var(--lily-color-primary) 18%, transparent); color: var(--lily-color-primary-deep); }
+    .lily-debug .pill--warn { background: color-mix(in srgb, var(--lily-color-accent) 16%, transparent); color: var(--lily-color-accent); }
+  </style>
+
+  <h1>Lily Debug</h1>
+  <p class="muted">
+    Runtime <code>v{{ hugo.Data.lily.runtime.version }}</code> ·
+    Protocol <code>v{{ hugo.Data.lily.runtime.protocol }}</code> ·
+    引擎 <code>{{ hugo.Data.lily.runtime.engine }}</code>
+  </p>
+
+  <h2>Registered Modules（{{ len hugo.Data.lily.modules }}）</h2>
+  <table>
+    <thead><tr><th>id</th><th>name</th><th>version</th><th>type</th><th>context</th><th>allowedSlots</th><th>template</th><th>schema 字段</th></tr></thead>
+    <tbody>
+    {{- range $id, $m := hugo.Data.lily.modules -}}
+      <tr>
+        <td><code>{{ $id }}</code></td>
+        <td>{{ $m.name }}</td>
+        <td>{{ $m.version }}</td>
+        <td>{{ $m.type }}</td>
+        <td>{{ $m.context | default "any" }}</td>
+        <td>{{ delimit ($m.allowedSlots | default slice) ", " }}</td>
+        <td><code>{{ $m.template.partial }}</code></td>
+        <td>{{ range $k, $_ := $m.schema | default dict }}{{ $k }} {{ end }}</td>
+      </tr>
+    {{- end -}}
+    </tbody>
+  </table>
+
+  <h2>Current Page</h2>
+  <p>
+    kind <code>{{ $kind }}</code> ·
+    section <code>{{ .Section | default "-" }}</code> ·
+    type <code>{{ .Type | default "-" }}</code> ·
+    layout <code>{{ .Layout | default "-" }}</code> ·
+    title <code>{{ .Title }}</code>
+  </p>
+
+  <h2>Resolved Layout：{{ $kind }}</h2>
+  {{- if not $layoutData -}}
+    <p><span class="pill pill--warn">warn</span> 当前页面没有对应的 Lily Layout。</p>
+  {{- else -}}
+    <p>title：<code>{{ $layoutData.title }}</code> · description：{{ $layoutData.description }}</p>
+    <table>
+      <thead><tr><th>slot</th><th>instances</th></tr></thead>
+      <tbody>
+      {{- range $slotName, $instances := $layoutData.slots -}}
+        <tr>
+          <td><code>{{ $kind }}.{{ $slotName }}</code></td>
+          <td>
+            {{- range $instances -}}
+              <div>
+                <code>{{ .id }}</code>
+                <span class="pill {{ if eq .enabled false }}pill--warn{{ else }}pill--ok{{ end }}">{{ if eq .enabled false }}disabled{{ else }}enabled{{ end }}</span>
+                module=<code>{{ .module }}</code>
+                {{- with .order }} · order=<code>{{ . }}</code>{{ end -}}
+                {{- with .config }} · config=<code>{{ . | jsonify }}</code>{{ end -}}
+              </div>
+            {{- end -}}
+          </td>
+        </tr>
+      {{- end -}}
+      </tbody>
+    </table>
+  {{- end -}}
+
+  <h2>Layout 配置原文</h2>
+  <pre>{{ $layoutData | jsonify }}</pre>
+
+  <h2>Resolver 冒烟测试</h2>
+  <p>直接 resolve 未知模块（应输出警告条，页面不崩）：</p>
+  {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "dbg-ghost" "module" "ghost-module") "slot" "home.sidebar" "page" . "layout" "home") }}
+
+  <h2>完整 Registry（modules + layouts）</h2>
+
+  <h2>完整 Registry（modules + layouts）</h2>
+  <pre>{{ dict "modules" hugo.Data.lily.modules "layouts" hugo.Data.lily.layouts | jsonify }}</pre>
+</section>
+{{- end -}}
+{{ end }}

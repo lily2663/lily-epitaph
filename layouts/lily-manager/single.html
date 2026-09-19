@@ -1,0 +1,12 @@
+{{- /* Lily Manager 机器可读接口（仅开发环境输出完整数据） */ -}}
+{{- if hugo.IsDevelopment -}}
+{{- $payload := dict
+  "protocol" "lily-module-protocol-v0.1"
+  "runtime" (hugo.Data.lily.runtime | default dict)
+  "modules" (hugo.Data.lily.modules | default dict)
+  "layouts" (hugo.Data.lily.layouts | default dict)
+-}}
+{{- $payload | jsonify | safeHTML -}}
+{{- else -}}
+{"protocol":"lily-module-protocol-v0.1","available":false}
+{{- end -}}

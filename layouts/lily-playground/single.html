@@ -1,0 +1,94 @@
+{{ define "main" }}
+{{- if not hugo.IsDevelopment -}}
+<section class="lily-playground lily-playground--off">
+  <h1>Module Playground</h1>
+  <p>此页面仅在开发环境（hugo server）可见。</p>
+</section>
+{{- else -}}
+{{- $sample := index ((site.GetPage "section" "posts").RegularPages | first 1) 0 -}}
+<section class="lily-playground">
+  <style>
+    .lily-playground { max-width: var(--maxw, 1200px); margin: 0 auto; }
+    .lily-playground > h1 { font-family: var(--lily-font-heading); margin: 2rem 0 .4rem; }
+    .lily-playground .muted { color: var(--lily-color-muted); margin-bottom: 1.5rem; }
+    .pg-block { border: 1px solid var(--lily-color-border-light); border-radius: var(--lily-radius-md); padding: 1.25rem 1.5rem; margin: 1.25rem 0; background: color-mix(in srgb, var(--lily-bg-card) 55%, transparent); }
+    .pg-block > h2 { font-family: var(--lily-font-heading); font-size: 1.05rem; margin: 0 0 .2rem; }
+    .pg-block > .pg-desc { color: var(--lily-color-muted); font-size: .8rem; margin-bottom: 1rem; }
+    .pg-variants { display: grid; gap: 1rem; }
+    .pg-variant { border-top: 1px dashed var(--lily-color-border); padding-top: 1rem; }
+    .pg-variant > .pg-label { font-size: .74rem; letter-spacing: .06em; color: var(--lily-color-muted); text-transform: uppercase; margin-bottom: .6rem; }
+    .pg-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 760px) { .pg-split { grid-template-columns: 1fr; } }
+  </style>
+
+  <h1>Lily Module Playground</h1>
+  <p class="muted">模块测试场：同一模块以不同配置 / 不同上下文渲染。样本文章：<code>{{ $sample.Title }}</code>（{{ if $sample.Params.protected }}受保护{{ else }}公开{{ end }}）。</p>
+
+  <div class="pg-block">
+    <h2>profile</h2>
+    <p class="pg-desc">多实例：同一模块定义，两个实例配置互不影响。</p>
+    <div class="pg-split">
+      <div class="pg-variant"><div class="pg-label">默认（home.sidebar）</div>
+        {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-profile-default" "module" "profile") "slot" "home.sidebar" "page" . "layout" "home") }}
+      </div>
+      <div class="pg-variant"><div class="pg-label">compact（home.sidebar）</div>
+        {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-profile-compact" "module" "profile" "config" (dict "compact" true "showBio" false)) "slot" "home.sidebar" "page" . "layout" "home") }}
+      </div>
+    </div>
+  </div>
+
+  <div class="pg-block">
+    <h2>tags</h2>
+    <p class="pg-desc">Taxonomy 查询：limit 0 = 全部；limit 3 = 前 3 个。</p>
+    <div class="pg-split">
+      <div class="pg-variant"><div class="pg-label">全部（home.sidebar）</div>
+        {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-tags-all" "module" "tags" "config" (dict "limit" 0)) "slot" "home.sidebar" "page" . "layout" "home") }}
+      </div>
+      <div class="pg-variant"><div class="pg-label">limit 3（home.sidebar）</div>
+        {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-tags-3" "module" "tags" "config" (dict "limit" 3)) "slot" "home.sidebar" "page" . "layout" "home") }}
+      </div>
+    </div>
+  </div>
+
+  <div class="pg-block">
+    <h2>recent-posts</h2>
+    <p class="pg-desc">Hugo Content Query：limit 3 的前三篇文章卡片（含像素画 / 加密标记）。</p>
+    <div class="pg-variant"><div class="pg-label">limit 3（home.main · site.Home 上下文）</div>
+      {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-posts-3" "module" "recent-posts" "config" (dict "limit" 3 "title" "Playground 文章")) "slot" "home.main" "page" site.Home "layout" "home") }}
+    </div>
+  </div>
+
+  <div class="pg-block">
+    <h2>toc</h2>
+    <p class="pg-desc">Article Context：以样本文章为 Page，渲染真实 .TableOfContents。</p>
+    <div class="pg-variant"><div class="pg-label">article.sidebar · 样本文章</div>
+      {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-toc" "module" "toc") "slot" "article.sidebar" "page" $sample "layout" "article") }}
+    </div>
+  </div>
+
+  <div class="pg-block">
+    <h2>article-meta</h2>
+    <p class="pg-desc">Page Params：日期 / 标题 / 标签 / 阅读统计。</p>
+    <div class="pg-variant"><div class="pg-label">article.header · 样本文章</div>
+      {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-meta" "module" "article-meta") "slot" "article.header" "page" $sample "layout" "article") }}
+    </div>
+  </div>
+
+  <div class="pg-block">
+    <h2>article-content</h2>
+    <p class="pg-desc">Markdown → Hugo → Goldmark → .Content 的直接渲染（不重写正文）。</p>
+    <div class="pg-variant"><div class="pg-label">article.main · 样本文章正文</div>
+      {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-content" "module" "article-content") "slot" "article.main" "page" $sample "layout" "article") }}
+    </div>
+  </div>
+
+  <div class="pg-block">
+    <h2>comments</h2>
+    <p class="pg-desc">service 类型：仅当站点配置了评论 API 时输出容器。</p>
+    <div class="pg-variant"><div class="pg-label">article.after · 样本文章</div>
+      {{ partial "lily/runtime/resolve.html" (dict "instance" (dict "id" "pg-comments" "module" "comments") "slot" "article.after" "page" $sample "layout" "article") }}
+    </div>
+  </div>
+</section>
+{{- end -}}
+{{ end }}
