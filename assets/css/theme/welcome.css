@@ -132,7 +132,7 @@ body:not(.splash-active) .site-footer {
   font-weight: 500;
   letter-spacing: 0.1em;
   cursor: pointer;
-  transition: all 0.4s ease;
+  transition: background-color 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
   box-shadow: 0 8px 30px rgba(127, 181, 176, 0.4);
   position: relative;
   overflow: hidden;

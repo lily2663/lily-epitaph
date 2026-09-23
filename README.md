@@ -4,11 +4,19 @@
 
 ## Install
 
-Copy or add this directory as `themes/lily-epitaph`, then set the theme in the site configuration:
+Add the public theme as a Git submodule so the site's commit pins a known version:
+
+```powershell
+git submodule add https://github.com/lily2663/lily-epitaph.git themes/lily-epitaph
+```
+
+Then set the theme in the site configuration:
 
 ```toml
 theme = "lily-epitaph"
 ```
+
+Clone with `git clone --recurse-submodules` (or run `git submodule update --init --recursive` in an existing clone). To upgrade deliberately, fetch and check out a reviewed theme commit, then commit the updated submodule pointer together with any compatibility changes.
 
 The theme is released under the [MIT License](./LICENSE). Its public example site contains no personal posts, credentials, or deployment settings.
 

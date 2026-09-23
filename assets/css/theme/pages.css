@@ -186,11 +186,15 @@
   font-family: var(--sans);
   font-size: 15px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .lock-form input[type="password"]:focus {
   border-color: var(--mint);
   box-shadow: 0 0 0 3px rgba(127, 181, 176, 0.1);
+}
+.lock-form input[type="password"]:focus-visible {
+  outline: 2px solid var(--mint-dark);
+  outline-offset: 2px;
 }
 
 .btn {
@@ -203,7 +207,7 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 .btn:hover {
   background: var(--mint-dark);

@@ -54,6 +54,7 @@
     {{- if $nightIsVideo }}<video class="site-background-video site-background-video--night" src="{{ $nightImage | safeURL }}"{{ with $nightPoster }} poster="{{ . | safeURL }}"{{ end }} muted loop playsinline preload="metadata" tabindex="-1"></video>{{ end -}}
   </div>
   {{- end }}
+  <a class="skip-link" href="#app">跳到正文</a>
   <div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
   <div class="navigation-progress" id="navigation-progress" aria-hidden="true"><span></span></div>
   {{- /* home.hero（欢迎屏）必须渲染在 #app 外：

@@ -1,4 +1,22 @@
 /* ---------- Header ---------- */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 2000;
+  padding: 10px 14px;
+  color: var(--ink);
+  background: var(--bg-card);
+  border: 2px solid var(--mint-dark);
+  border-radius: var(--radius-sm);
+  transform: translateY(calc(-100% - 12px));
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--mint-dark);
+  outline-offset: 2px;
+}
+
 .site-header {
   background: var(--bg-card);
   background: color-mix(in srgb, var(--bg-card) 76%, transparent);
@@ -67,7 +85,7 @@
   color: var(--ink-soft);
   padding: 6px 0;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, border-color 0.2s ease;
 }
 .nav a:hover {
   color: var(--mint-dark);
@@ -101,12 +119,16 @@
   font-family: var(--sans);
   font-size: 14px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: width 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .search:focus {
   border-color: var(--mint);
   width: 220px;
   box-shadow: 0 0 0 3px rgba(127, 181, 176, 0.1);
+}
+.search:focus-visible {
+  outline: 2px solid var(--mint-dark);
+  outline-offset: 2px;
 }
 
 .search-mode {
@@ -123,7 +145,7 @@
   font-size: 12px;
   padding: 6px 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 .search-mode-btn + .search-mode-btn {
   border-left: 1px solid var(--border);

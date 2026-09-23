@@ -64,6 +64,11 @@
 
 html { scroll-behavior: smooth; }
 
+#app,
+.article :is(h1, h2, h3, h4, h5, h6)[id] {
+  scroll-margin-top: var(--header-clearance, 100px);
+}
+
 body {
   background-color: var(--bg);
   isolation: isolate;

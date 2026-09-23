@@ -63,6 +63,11 @@
 .comment-content:focus {
   border-color: var(--mint);
 }
+.comment-input-row input:focus-visible,
+.comment-content:focus-visible {
+  outline: 2px solid var(--mint-dark);
+  outline-offset: 2px;
+}
 .comment-submit {
   margin-top: 12px;
   padding: 10px 24px;
