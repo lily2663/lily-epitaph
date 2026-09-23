@@ -93,6 +93,9 @@ Welcome module instances can override the legacy `params.welcome` defaults, incl
 
 ## Lily Module Protocol v1
 
+The normative v1 contract, compatibility policy, and manifest JSON Schema are
+documented in [`docs/protocol/v1.md`](./docs/protocol/v1.md).
+
 Every visible page is assembled from Slots and modules. Built-ins live in
 `data/lily/modules/` inside the theme; a site can add higher-priority local modules
 under its own `data/lily/modules/` directory. A module declares its id, version,

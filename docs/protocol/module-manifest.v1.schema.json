@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/lily2663/lily-epitaph/blob/main/docs/protocol/module-manifest.v1.schema.json",
+  "title": "Lily Module Protocol v1 manifest",
+  "type": "object",
+  "required": ["id", "allowedSlots"],
+  "properties": {
+    "apiVersion": { "const": "lily-module/v1" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "name": { "type": "string" },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$" },
+    "category": { "type": "string" },
+    "type": { "type": "string" },
+    "icon": { "type": "string" },
+    "description": { "type": "string" },
+    "context": { "type": "string" },
+    "allowedSlots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*\\.[A-Za-z_][A-Za-z0-9_-]*$" }
+    },
+    "template": {
+      "type": "object",
+      "properties": { "partial": { "type": "string", "minLength": 1 } },
+      "additionalProperties": true
+    },
+    "assets": {
+      "type": "object",
+      "properties": {
+        "styles": { "$ref": "#/definitions/assetList" },
+        "scripts": { "$ref": "#/definitions/assetList" }
+      },
+      "additionalProperties": true
+    },
+    "capabilities": { "type": "object" },
+    "defaults": { "type": "object" },
+    "schema": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/field" }
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "assetList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" }
+    },
+    "field": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["string", "number", "boolean", "select", "color", "url"] },
+        "label": { "type": "string" },
+        "help": { "type": "string" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "step": { "type": "number", "exclusiveMinimum": 0 },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["value"],
+            "properties": { "value": {}, "label": { "type": "string" } },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
