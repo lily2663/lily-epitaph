@@ -7,8 +7,8 @@
       {"path":"params.subtitle","label":"副标题","type":"string","help":"页眉中的简短说明"},
       {"path":"params.description","label":"站点描述","type":"string","help":"用于搜索与分享摘要"},
       {"path":"params.author","label":"作者","type":"string","help":"文章结构化信息中的作者名"},
-      {"path":"params.avatar","label":"头像路径","type":"string","help":"从“外观”页上传后可在此微调"},
-      {"path":"params.favicon","label":"浏览器图标路径","type":"string","help":"留空时沿用作者头像；可填资源库中的 /assets/... 图片路径"}
+      {"path":"params.avatar","label":"头像路径","type":"url","help":"从“外观”页上传后可在此微调"},
+      {"path":"params.favicon","label":"浏览器图标路径","type":"url","help":"留空时沿用作者头像；可填资源库中的 /assets/... 图片路径"}
     ]},
     {"id":"theme","label":"主题外观","fields":[
       {"path":"params.theme.webFonts","label":"加载在线字体","type":"boolean","default":false,"help":"默认使用系统字体，减少外部请求；开启后加载 Google Fonts，访问较慢的网络可能延迟显示。字体预设仍然有效。"},
@@ -50,7 +50,7 @@
     ]},
     {"id":"reading","label":"阅读与代码","fields":[
       {"path":"params.pet.enabled","label":"启用宠物","type":"boolean"},
-      {"path":"params.pet.image","label":"宠物图片路径","type":"string"},
+      {"path":"params.pet.image","label":"宠物图片路径","type":"url"},
       {"path":"params.article.toc","label":"显示目录","type":"boolean"},
       {"path":"params.article.codeCopy","label":"显示代码复制","type":"boolean"},
       {"path":"params.protected.enabled","label":"启用受保护文章阅读器","type":"boolean"}
@@ -81,7 +81,7 @@
       {"path":"params.features.prefetch","label":"链接预加载","type":"boolean"},
       {"path":"params.features.viewTransition","label":"页面切换动画","type":"boolean"},
       {"path":"params.comments.enabled","label":"启用评论","type":"boolean"},
-      {"path":"params.comments.api","label":"评论 API 地址","type":"string","help":"留空时评论模块不会请求服务"}
+      {"path":"params.comments.api","label":"评论 API 地址","type":"url","help":"留空时评论模块不会请求服务"}
     ]},
     {"id":"footer","label":"页脚","fields":[
       {"path":"params.footer.copyright","label":"版权文字","type":"string"},
