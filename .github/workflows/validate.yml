@@ -13,6 +13,13 @@ jobs:
         with:
           hugo-version: 0.165.0
           extended: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Check browser JavaScript syntax
+        run: |
+          find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check static/sw.js
       - name: Verify standalone browser runtime
         run: |
           test -f static/assets/vendor/marked.min.js
