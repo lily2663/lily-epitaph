@@ -10,7 +10,16 @@
   const MAX_PAYLOAD_TEXT = 8 * 1024 * 1024;
   const MAX_CIPHERTEXT_BYTES = 5 * 1024 * 1024;
   const EXPECTED_ITERATIONS = 600000;
+  const lifecycle = new AbortController();
+  document.addEventListener('lily:before-page-swap', () => lifecycle.abort(), { once: true });
   let busy = false;
+
+  function requestSignal(timeoutMs) {
+    const timeout = AbortSignal.timeout(timeoutMs);
+    return typeof AbortSignal.any === 'function'
+      ? AbortSignal.any([lifecycle.signal, timeout])
+      : timeout;
+  }
 
   function decodeBase64(value, label, expectedLength = null, maxLength = Infinity) {
     if (typeof value !== 'string' || value.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) throw new Error(`${label} invalid`);
@@ -32,9 +41,21 @@
     };
   }
 
+  function runtimeReady(src) {
+    if (src.includes('marked')) return Boolean(window.marked?.parse);
+    if (src.includes('highlight')) return Boolean(window.hljs?.highlightElement);
+    if (src.includes('purify')) return Boolean(window.DOMPurify?.sanitize);
+    return false;
+  }
+
   const loadScript = (src) => new Promise((resolve, reject) => {
+    if (runtimeReady(src)) { resolve(); return; }
     const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) { resolve(); return; }
+    if (existing) {
+      existing.addEventListener('load', resolve, { once: true });
+      existing.addEventListener('error', reject, { once: true });
+      return;
+    }
     const script = document.createElement('script');
     script.src = src;
     script.async = true;
@@ -43,14 +64,44 @@
     document.head.append(script);
   });
 
-  async function loadPayload() {
-    const response = await fetch(box.dataset.payload, { cache: 'no-store', credentials: 'same-origin' });
-    if (!response.ok) throw new Error(`payload HTTP ${response.status}`);
+  async function readTextLimited(response, maxBytes) {
     const declared = Number(response.headers.get('content-length') || 0);
-    if (Number.isFinite(declared) && declared > MAX_PAYLOAD_TEXT) throw new Error('payload too large');
-    const raw = await response.text();
-    if (raw.length > MAX_PAYLOAD_TEXT) throw new Error('payload too large');
-    return JSON.parse(raw);
+    if (Number.isFinite(declared) && declared > maxBytes) throw new Error('payload too large');
+    if (!response.body?.getReader) {
+      const text = await response.text();
+      if (new TextEncoder().encode(text).length > maxBytes) throw new Error('payload too large');
+      return text;
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let size = 0;
+    let text = '';
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > maxBytes) {
+          await reader.cancel();
+          throw new Error('payload too large');
+        }
+        text += decoder.decode(value, { stream: true });
+      }
+      text += decoder.decode();
+      return text;
+    } finally {
+      reader.releaseLock?.();
+    }
+  }
+
+  async function loadPayload() {
+    const response = await fetch(box.dataset.payload, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: requestSignal(10000),
+    });
+    if (!response.ok) throw new Error(`payload HTTP ${response.status}`);
+    return JSON.parse(await readTextLimited(response, MAX_PAYLOAD_TEXT));
   }
 
   async function unlock() {
@@ -83,6 +134,7 @@
         loadScript('/assets/vendor/highlight.min.js'),
         loadScript('/assets/vendor/purify.min.js'),
       ]);
+      if (lifecycle.signal.aborted) return;
       if (!window.marked?.parse || !window.DOMPurify?.sanitize) throw new Error('markdown runtime unavailable');
       const rendered = window.marked.parse(markdown, { gfm: true, breaks: false });
       body.innerHTML = window.DOMPurify.sanitize(rendered, { USE_PROFILES: { html: true } });
@@ -95,6 +147,7 @@
       box.hidden = true;
       password.value = '';
     } catch {
+      if (lifecycle.signal.aborted) return;
       status.textContent = '密码错误或文章数据无法解锁。';
       busy = false;
       unlockButton.disabled = false;
