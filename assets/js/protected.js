@@ -34,8 +34,14 @@
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(payload.cipher.iv) }, key, joined);
       const markdown = new TextDecoder().decode(plain);
       status.textContent = '正在渲染文章…';
-      await Promise.all([loadScript('/assets/vendor/marked.min.js'), loadScript('/assets/vendor/highlight.min.js')]);
-      body.innerHTML = window.marked.parse(markdown, { gfm: true, breaks: false });
+      await Promise.all([
+        loadScript('/assets/vendor/marked.min.js'),
+        loadScript('/assets/vendor/highlight.min.js'),
+        loadScript('/assets/vendor/purify.min.js'),
+      ]);
+      if (!window.marked?.parse || !window.DOMPurify?.sanitize) throw new Error('markdown runtime unavailable');
+      const rendered = window.marked.parse(markdown, { gfm: true, breaks: false });
+      body.innerHTML = window.DOMPurify.sanitize(rendered, { USE_PROFILES: { html: true } });
       body.querySelectorAll('pre code').forEach((code) => window.hljs?.highlightElement(code));
       if (!window.LilyArticle) throw new Error('article helpers unavailable');
       window.LilyArticle.enhance(body);
