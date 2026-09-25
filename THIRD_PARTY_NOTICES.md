@@ -7,3 +7,5 @@ The standalone theme vendors the following browser libraries under `static/asset
 - **DOMPurify 3.4.16** — Apache License 2.0 or Mozilla Public License 2.0.
 
 The vendored files retain their upstream license headers. They are included locally so protected-content rendering and syntax highlighting do not depend on a CDN or files supplied by the consuming site.
+
+Full upstream license texts are vendored alongside the browser assets under `static/assets/vendor/licenses/`.

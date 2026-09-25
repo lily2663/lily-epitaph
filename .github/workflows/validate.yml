@@ -23,3 +23,9 @@ jobs:
       - name: Build example site
         working-directory: exampleSite
         run: hugo --themesDir ../.. --gc --minify --panicOnWarning
+      - name: Verify runtime assets are published
+        run: |
+          test -f exampleSite/public/assets/vendor/marked.min.js
+          test -f exampleSite/public/assets/vendor/highlight.min.js
+          test -f exampleSite/public/assets/vendor/purify.min.js
+          test -f exampleSite/public/sw.js
