@@ -5,7 +5,15 @@
   pet.setAttribute('aria-label', '戳戳团子');
   pet.setAttribute('aria-expanded', 'false');
   const imageSource = document.body.dataset.petImage || '/lily-epitaph/tuanzi.png';
-  pet.innerHTML = `<span class="tz-bubble" aria-live="polite"></span><img class="tuanzi-img" src="${imageSource}" alt="" draggable="false">`;
+  const bubbleNode = document.createElement('span');
+  bubbleNode.className = 'tz-bubble';
+  bubbleNode.setAttribute('aria-live', 'polite');
+  const imageNode = document.createElement('img');
+  imageNode.className = 'tuanzi-img';
+  imageNode.src = imageSource;
+  imageNode.alt = '';
+  imageNode.draggable = false;
+  pet.append(bubbleNode, imageNode);
   document.body.append(pet);
 
   const backdrop = document.createElement('button');

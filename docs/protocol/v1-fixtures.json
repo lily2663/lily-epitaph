@@ -1,0 +1,118 @@
+{
+  "protocol": "lily-module/v1",
+  "valid": [
+    {
+      "name": "legacy minimal manifest",
+      "fileId": "quote",
+      "manifest": {
+        "id": "quote",
+        "allowedSlots": [
+          "home.main"
+        ]
+      }
+    },
+    {
+      "name": "select values preserve JSON value types",
+      "fileId": "mode-demo",
+      "manifest": {
+        "apiVersion": "lily-module/v1",
+        "id": "mode-demo",
+        "version": "1.2.3",
+        "context": "home",
+        "allowedSlots": [
+          "home.main"
+        ],
+        "template": {
+          "partial": "lily/modules/mode-demo/render.html"
+        },
+        "defaults": {
+          "mode": 2
+        },
+        "schema": {
+          "mode": {
+            "type": "select",
+            "options": [
+              {
+                "value": "one",
+                "label": "String"
+              },
+              {
+                "value": 2,
+                "label": "Number"
+              },
+              {
+                "value": true,
+                "label": "Boolean"
+              },
+              {
+                "value": null,
+                "label": "Null"
+              },
+              {
+                "value": {
+                  "kind": "object",
+                  "level": 1
+                },
+                "label": "Object"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "duplicate allowed slots",
+      "fileId": "quote",
+      "manifest": {
+        "id": "quote",
+        "allowedSlots": [
+          "home.main",
+          "home.main"
+        ]
+      }
+    },
+    {
+      "name": "invalid semver",
+      "fileId": "quote",
+      "manifest": {
+        "id": "quote",
+        "version": "v1",
+        "allowedSlots": [
+          "home.main"
+        ]
+      }
+    },
+    {
+      "name": "unsafe asset traversal",
+      "fileId": "quote",
+      "manifest": {
+        "id": "quote",
+        "allowedSlots": [
+          "home.main"
+        ],
+        "assets": {
+          "scripts": [
+            "../escape.js"
+          ]
+        }
+      }
+    },
+    {
+      "name": "unknown schema field type",
+      "fileId": "quote",
+      "manifest": {
+        "id": "quote",
+        "allowedSlots": [
+          "home.main"
+        ],
+        "schema": {
+          "mode": {
+            "type": "magic"
+          }
+        }
+      }
+    }
+  ]
+}
