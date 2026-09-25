@@ -4,7 +4,7 @@
     {{ range hugo.Data.site.friends }}
       <a class="friend-card" href="{{ .url }}" target="_blank" rel="noopener noreferrer">
         {{ if .avatar }}
-          <img class="friend-avatar" src="{{ .avatar }}" alt="{{ .name }} 的头像" loading="lazy">
+          <img class="friend-avatar" src="{{ .avatar }}" alt="{{ .name }} 的头像" loading="lazy" referrerpolicy="no-referrer">
         {{ else }}
           <span class="friend-avatar friend-avatar--text" aria-hidden="true">{{ substr .name 0 1 }}</span>
         {{ end }}
