@@ -7,16 +7,52 @@
   const toc = document.querySelector('[data-protected-toc] .toc');
   const password = box.querySelector('#protected-password');
   const unlockButton = box.querySelector('[data-unlock]');
-  const bytes = (value) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+  const MAX_PAYLOAD_TEXT = 8 * 1024 * 1024;
+  const MAX_CIPHERTEXT_BYTES = 5 * 1024 * 1024;
+  const EXPECTED_ITERATIONS = 600000;
   let busy = false;
+
+  function decodeBase64(value, label, expectedLength = null, maxLength = Infinity) {
+    if (typeof value !== 'string' || value.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) throw new Error(`${label} invalid`);
+    const raw = atob(value);
+    if (expectedLength != null && raw.length !== expectedLength) throw new Error(`${label} length invalid`);
+    if (raw.length > maxLength) throw new Error(`${label} too large`);
+    return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+  }
+
+  function validatePayload(payload) {
+    if (!payload || typeof payload !== 'object' || payload.version !== 2 || payload.pageId !== box.dataset.protectedId) throw new Error('unsupported payload');
+    if (payload.kdf?.name !== 'PBKDF2' || payload.kdf?.hash !== 'SHA-256' || payload.kdf?.iterations !== EXPECTED_ITERATIONS) throw new Error('unsupported kdf');
+    if (payload.cipher?.name !== 'AES-256-GCM') throw new Error('unsupported cipher');
+    return {
+      salt: decodeBase64(payload.kdf.salt, 'salt', 16),
+      iv: decodeBase64(payload.cipher.iv, 'iv', 12),
+      tag: decodeBase64(payload.cipher.tag, 'tag', 16),
+      data: decodeBase64(payload.cipher.data, 'ciphertext', null, MAX_CIPHERTEXT_BYTES),
+    };
+  }
+
   const loadScript = (src) => new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${src}"]`);
     if (existing) { resolve(); return; }
     const script = document.createElement('script');
-    script.src = src; script.async = true;
-    script.onload = resolve; script.onerror = reject;
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = reject;
     document.head.append(script);
   });
+
+  async function loadPayload() {
+    const response = await fetch(box.dataset.payload, { cache: 'no-store', credentials: 'same-origin' });
+    if (!response.ok) throw new Error(`payload HTTP ${response.status}`);
+    const declared = Number(response.headers.get('content-length') || 0);
+    if (Number.isFinite(declared) && declared > MAX_PAYLOAD_TEXT) throw new Error('payload too large');
+    const raw = await response.text();
+    if (raw.length > MAX_PAYLOAD_TEXT) throw new Error('payload too large');
+    return JSON.parse(raw);
+  }
+
   async function unlock() {
     if (busy) return;
     const value = password.value;
@@ -25,13 +61,21 @@
     unlockButton.disabled = true;
     status.textContent = '正在解锁…';
     try {
-      const payload = await (await fetch(box.dataset.payload, { cache: 'no-store' })).json();
-      if (!crypto?.subtle || payload.version !== 2) throw new Error('unsupported');
+      if (!crypto?.subtle) throw new Error('Web Crypto unavailable');
+      const payload = await loadPayload();
+      const encoded = validatePayload(payload);
       const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(value), 'PBKDF2', false, ['deriveKey']);
-      const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: bytes(payload.kdf.salt), iterations: payload.kdf.iterations, hash: payload.kdf.hash }, material, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
-      const joined = new Uint8Array(bytes(payload.cipher.data).length + bytes(payload.cipher.tag).length);
-      joined.set(bytes(payload.cipher.data)); joined.set(bytes(payload.cipher.tag), bytes(payload.cipher.data).length);
-      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(payload.cipher.iv) }, key, joined);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: encoded.salt, iterations: EXPECTED_ITERATIONS, hash: 'SHA-256' },
+        material,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt'],
+      );
+      const joined = new Uint8Array(encoded.data.length + encoded.tag.length);
+      joined.set(encoded.data);
+      joined.set(encoded.tag, encoded.data.length);
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: encoded.iv }, key, joined);
       const markdown = new TextDecoder().decode(plain);
       status.textContent = '正在渲染文章…';
       await Promise.all([
@@ -49,12 +93,14 @@
       window.LilyArticle.setupTocSpy(body, toc);
       layout.hidden = false;
       box.hidden = true;
+      password.value = '';
     } catch {
       status.textContent = '密码错误或文章数据无法解锁。';
       busy = false;
       unlockButton.disabled = false;
     }
   }
+
   unlockButton.addEventListener('click', unlock);
   password.addEventListener('keydown', (event) => { if (event.key === 'Enter') unlock(); });
 })();
