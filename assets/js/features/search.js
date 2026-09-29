@@ -74,7 +74,9 @@ export function createPostSearch({ attachPixelSprite }) {
       title.textContent = item?.title || '未命名文章';
       const excerpt = document.createElement('p');
       excerpt.className = 'item-excerpt';
-      excerpt.textContent = item?.protected ? '该文章已加密，需输入密码查看。' : String(item?.summary || '').slice(0, 140);
+      excerpt.textContent = item?.protected
+        ? (item.protectionEnabled === false ? '该受保护文章暂时不可阅读，功能维护中。' : '该文章已加密，需输入密码查看。')
+        : String(item?.summary || '').slice(0, 140);
       link.append(kicker, title, excerpt);
       card.append(link);
       attachPixelSprite(card);

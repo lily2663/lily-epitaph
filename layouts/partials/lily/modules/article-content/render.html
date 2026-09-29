@@ -5,13 +5,20 @@
  * ============================================================ */ -}}
 {{- $page := .Page -}}
 {{- $protected := $page.Params.protected -}}
+{{- $protectionEnabled := $page.Site.Params.protected.enabled -}}
 {{- $commentID := $page.Params.commentId | default $page.File.ContentBaseName -}}
 {{- if $protected }}
+{{- if $protectionEnabled }}
 <section class="lock-box" data-protected-id="{{ $commentID }}" data-payload="/protected/{{ urls.PathEscape $commentID }}.json">
   <h2>受保护文章</h2><p>输入密码后在本次会话内阅读。此功能是轻量访问门槛，不提供强保密。</p>
   <label for="protected-password">密码</label><div class="lock-form"><input id="protected-password" type="password" autocomplete="current-password"><button type="button" data-unlock>解锁阅读</button></div>
   <p class="lock-status" aria-live="polite"></p>
 </section>
+{{- else }}
+<section class="lock-box lock-box--offline" role="status">
+  <h2>受保护文章暂不可用</h2><p>文章加密功能正在维护中，暂时无法解锁阅读。原始内容已保留，恢复后会重新开放。</p>
+</section>
+{{- end }}
 {{ end -}}
 <div class="article-layout lily-article-body-wrap" data-content-layout="{{ .Config.layout | default "auto" }}"{{ if $protected }} data-protected-layout hidden{{ end }}>
   <div class="article-body{{ if $protected }} protected-body{{ end }}"{{ if $protected }} data-protected-body{{ end }}>{{ if not $protected }}{{ $page.Content }}{{ end }}</div>
