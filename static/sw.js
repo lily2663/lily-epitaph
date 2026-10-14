@@ -21,33 +21,40 @@ function isCacheable(response) {
 async function updateCache(request) {
   const response = await fetch(request);
   if (isCacheable(response)) {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(request, response.clone());
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    } catch {
+      // Cache storage is optional; quota or storage failures must not hide a network response.
+    }
   }
   return response;
 }
 
-async function staleWhileRevalidate(request, event) {
-  const cached = await caches.match(request);
-  const update = updateCache(request).catch(() => null);
-  if (cached) {
-    event.waitUntil(update);
-    return cached;
+async function cachedResponse(request) {
+  try {
+    return await caches.match(request);
+  } catch {
+    return null;
   }
-  return (await update) || Response.error();
+}
+
+async function staleWhileRevalidate(request, event) {
+  const update = updateCache(request).catch(() => null);
+  event.waitUntil(update);
+  const cached = await cachedResponse(request);
+  return cached || (await update) || Response.error();
 }
 
 async function navigationResponse(request, event) {
   const network = updateCache(request).catch(() => null);
+  event.waitUntil(network);
   const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
   const quick = await Promise.race([network, timeout]);
   if (quick) return quick;
-  const cached = await caches.match(request);
-  if (cached) {
-    event.waitUntil(network);
-    return cached;
-  }
-  return (await network) || (await caches.match('/')) || Response.error();
+  const cached = await cachedResponse(request);
+  if (cached) return cached;
+  return (await network) || (await cachedResponse('/')) || Response.error();
 }
 
 self.addEventListener('fetch', (event) => {

@@ -131,7 +131,13 @@ Images can use page bundles or root-relative site assets. Article images are laz
 
 ## Search and keyboard controls
 
-Search is enabled from `params.search.enabled`. Article mode matches title, summary and tags. Text mode lazily requests `/index.json` only when needed. `/` focuses search, `Escape` clears it, and `ArrowDown` moves to the first visible result.
+Search is enabled from `params.search.enabled`. Article mode matches title, summary and tags; Text mode also matches public article bodies. The index is requested only when a query is entered. `/` focuses search, `Escape` clears it, and `ArrowDown` moves to the first visible result. Searches on article and other pages submit to `/search/?q=...&mode=article` (or `mode=text`), whose page uses `layout: search`. Home-page results continue to filter inline. A failed index request shows a retry prompt.
+
+## Discovery and continued reading
+
+Add an archive page with `layout: archives` to list published posts by year. The footer shows archive and RSS links when their targets exist; its `showArchives` and `showRSS` module settings can hide either link. RSS feeds contain published posts in the feed's own scope, with summaries for public articles and a generic notice for protected articles. The head advertises enabled feeds to RSS readers.
+
+The article layout includes an `article-footer` module for adjacent articles, related posts that share tags, and copying a permanent link. Each section can be disabled through the module configuration. The article metadata module can show a modification date when it is later than the publication date. These features use front matter and published content, and do not invent update times or article permissions.
 
 ## Optional protected content
 

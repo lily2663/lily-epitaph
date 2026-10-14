@@ -1,3 +1,20 @@
+function syncPageMetadata(newDoc) {
+  if (!document.head || !newDoc.head) return;
+  const selector = [
+    'link[rel="canonical"]',
+    'link[rel="alternate"][type="application/rss+xml"]',
+    'meta[name="description"]',
+    'meta[name="robots"]',
+    'meta[property^="og:"]',
+    'meta[property^="article:"]',
+    'meta[name^="twitter:"]',
+    'script[type="application/ld+json"]',
+  ].join(',');
+  // Replace only page metadata so theme setup, styles and runtime scripts stay put.
+  document.head.querySelectorAll(selector).forEach((node) => node.remove());
+  document.head.append(...Array.from(newDoc.head.querySelectorAll(selector), (node) => node.cloneNode(true)));
+}
+
 export function installPjaxNavigation({ initPage, updateScroll }) {
   const root = document.documentElement;
   const app = document.getElementById('app');
@@ -37,19 +54,27 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
   function fetchPage(input, signal) {
     const key = pageKey(input);
     const cached = pageCache.get(key);
-    if (cached) return cached;
-    let request = fetch(input, { signal, credentials: 'same-origin' })
+    // A rapid second click aborts the previous navigation before its rejection
+    // handler runs. Never hand that already-aborted promise to the new click.
+    if (cached && !cached.signal?.aborted) return cached.promise;
+    const entry = { signal };
+    entry.promise = fetch(input, { signal, credentials: 'same-origin' })
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.text();
       })
+      .then((html) => {
+        // Once the body is complete, later aborts must not invalidate this page.
+        entry.signal = undefined;
+        return html;
+      })
       .catch((error) => {
-        if (pageCache.get(key) === request) pageCache.delete(key);
+        if (pageCache.get(key) === entry) pageCache.delete(key);
         throw error;
       });
-    pageCache.set(key, request);
+    pageCache.set(key, entry);
     while (pageCache.size > 8) pageCache.delete(pageCache.keys().next().value);
-    return request;
+    return entry.promise;
   }
 
   function beginNavigation() {
@@ -96,8 +121,9 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
       doc = new DOMParser().parseFromString(html, 'text/html');
       if (!doc.getElementById('app')) throw new Error('no app container');
     } catch (error) {
-      if (token !== navToken || error.name === 'AbortError') return;
+      if (token !== navToken) return;
       completeNavigation(token);
+      if (error.name === 'AbortError') return;
       location.href = url;
       return;
     }
@@ -114,6 +140,7 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
     document.dispatchEvent(new CustomEvent('lily:before-page-swap'));
     app.replaceChildren(...doc.getElementById('app').childNodes);
     document.title = doc.title;
+    syncPageMetadata(doc);
 
     if (push) history.pushState({ scroll: 0 }, '', url);
     const navigated = new URL(url, location.href);
@@ -141,11 +168,11 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const link = event.target.closest('a[href]');
-    if (!link || link.target || link.hasAttribute('download')) return;
+    if (!link || link.target || link.hasAttribute('download') || link.hasAttribute('data-no-pjax')) return;
     const href = link.getAttribute('href') || '';
     if (/^(mailto:|tel:|javascript:)/.test(href)) return;
     const url = new URL(link.href, location.href);
-    if (url.origin !== location.origin) return;
+    if (url.origin !== location.origin || /\.(?:xml|rss|atom)$/i.test(url.pathname)) return;
 
     if (url.pathname === location.pathname && url.search === location.search) {
       if (url.hash) {
@@ -187,9 +214,9 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
   const pendingPrefetch = new WeakMap();
 
   function prefetch(link) {
-    if (!canPrefetch || !link || link.target || link.hasAttribute('download')) return;
+    if (!canPrefetch || !link || link.target || link.hasAttribute('download') || link.hasAttribute('data-no-pjax')) return;
     const url = new URL(link.href, location.href);
-    if (url.origin !== location.origin || url.pathname === location.pathname || url.hash) return;
+    if (url.origin !== location.origin || /\.(?:xml|rss|atom)$/i.test(url.pathname) || url.pathname === location.pathname || url.hash) return;
     const key = `${url.pathname}${url.search}`;
     if (prefetched.has(key)) return;
     prefetched.add(key);

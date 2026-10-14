@@ -28,6 +28,8 @@ slots:
       module: tags
       enabled: false
   after:
+    - id: article-footer
+      module: article-footer
     - id: article-comments
       module: comments
     - id: article-map

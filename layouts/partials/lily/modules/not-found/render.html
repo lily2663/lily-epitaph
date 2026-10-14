@@ -1,2 +1,14 @@
 {{- $cfg := .Config -}}
-<section class="not-found"><p class="kicker">404</p><h1>{{ $cfg.title | default "这页不在这里" }}</h1><p>{{ $cfg.description | default "链接可能已更改，或页面从未存在。文章列表仍然在原处。" }}</p><a class="not-found-link" href="/">{{ $cfg.action | default "回到首页" }}</a></section>
+<section class="not-found"><p class="kicker">404</p><h1>{{ $cfg.title | default "这页不在这里" }}</h1><p>{{ $cfg.description | default "链接可能已更改，或页面从未存在。文章列表仍然在原处。" }}</p>
+{{- if .Page.Site.Params.search.enabled }}
+<form class="not-found__search" action="{{ "/search/" | relURL }}" method="get" role="search" aria-label="找回文章">
+  <label class="sr-only" for="not-found-search">搜索文章</label>
+  <input id="not-found-search" name="q" type="search" placeholder="试试文章标题或关键词" required>
+  <button type="submit">搜索</button>
+</form>
+{{- end }}
+<nav class="not-found__paths" aria-label="继续浏览">
+  <a class="not-found-link" href="/">{{ $cfg.action | default "回到首页" }}</a>
+  {{ with .Page.Site.GetPage "/archives" }}<a href="{{ .RelPermalink }}">文章归档</a>{{ end }}
+  {{ with .Page.Site.GetPage "/tags" }}<a href="{{ .RelPermalink }}">按标签查找</a>{{ end }}
+</nav></section>

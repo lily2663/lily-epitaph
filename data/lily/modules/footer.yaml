@@ -11,6 +11,8 @@ template:
 defaults:
   showCopyright: true
   showNote: true
+  showArchives: true
+  showRSS: true
 schema:
   showCopyright:
     type: boolean
@@ -18,3 +20,9 @@ schema:
   showNote:
     type: boolean
     label: 显示备注
+  showArchives:
+    type: boolean
+    label: 显示文章归档入口
+  showRSS:
+    type: boolean
+    label: 显示 RSS 订阅入口

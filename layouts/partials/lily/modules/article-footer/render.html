@@ -1,0 +1,62 @@
+{{- $page := .Page -}}
+{{- $cfg := .Config -}}
+{{- $now := now -}}
+{{- if and (eq $page.Section "posts") (not $page.Draft) (not ($page.Date.After $now)) (not ($page.PublishDate.After $now)) -}}
+  {{- /* Sort explicitly by publication date, then URL, rather than depending on
+         Hugo's implicit PrevInSection/NextInSection ordering. */ -}}
+  {{- $entries := slice -}}
+  {{- range where $page.Site.RegularPages "Section" "posts" -}}
+    {{- if and (not .Draft) (not (.Date.After $now)) (not (.PublishDate.After $now)) -}}
+      {{- $key := printf "%s|%s" (.Date.UTC.Format "2006-01-02T15:04:05.000000000Z") .RelPermalink -}}
+      {{- $entries = $entries | append (dict "page" . "key" $key) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $entries = sort $entries "key" "asc" -}}
+  {{- $position := -1 -}}
+  {{- range $index, $entry := $entries -}}
+    {{- if eq $entry.page.RelPermalink $page.RelPermalink }}{{ $position = $index }}{{ end -}}
+  {{- end -}}
+  {{- $older := false -}}
+  {{- $newer := false -}}
+  {{- if gt $position 0 }}{{ $older = (index $entries (sub $position 1)).page }}{{ end -}}
+  {{- if and (ge $position 0) (lt $position (sub (len $entries) 1)) }}{{ $newer = (index $entries (add $position 1)).page }}{{ end -}}
+  {{- $related := slice -}}
+  {{- $tags := $page.Params.tags | default slice -}}
+  {{- if and $cfg.showRelated (gt (len $tags) 0) -}}
+    {{- range $entry := $entries -}}
+      {{- if ne $entry.page.RelPermalink $page.RelPermalink -}}
+        {{- $shared := intersect $tags ($entry.page.Params.tags | default slice) -}}
+        {{- if gt (len $shared) 0 -}}
+          {{- $related = $related | append (dict "page" $entry.page "tags" $shared "key" (printf "%08d|%s" (len $shared) $entry.key)) -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $limit := math.Max 1 (math.Min 3 ($cfg.relatedLimit | default 3 | int)) | int -}}
+    {{- $related = first $limit (sort $related "key" "desc") -}}
+  {{- end -}}
+  {{- if or $cfg.showPermalink (and $cfg.showNavigation (or $older $newer)) (gt (len $related) 0) -}}
+  <footer class="article-footer" aria-label="文章后续阅读">
+    {{- if $cfg.showPermalink -}}
+    <section class="article-footer__share" data-article-share>
+      <div class="article-footer__heading"><h2>保存与分享</h2><button type="button" data-copy-permalink>复制永久链接</button></div>
+      <div class="article-footer__permalink" data-permalink-fallback hidden><label>文章永久链接<input type="text" value="{{ $page.Permalink }}" data-permalink-input readonly></label></div>
+      <p class="article-footer__status" data-permalink-status role="status" aria-live="polite"></p>
+      <noscript><p class="article-footer__manual">永久链接：<a href="{{ $page.Permalink }}">{{ $page.Permalink }}</a></p></noscript>
+    </section>
+    {{- end -}}
+    {{- if and $cfg.showNavigation (or $older $newer) -}}
+    <nav class="article-footer__navigation" aria-label="按发布日期阅读上下篇">
+      {{- with $older }}<a class="article-footer__neighbor" href="{{ .RelPermalink }}" rel="prev" data-article-previous><span>← 上一篇 · 较早文章</span><strong>{{ .Title }}</strong><time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2006-01-02" }}</time></a>{{ end -}}
+      {{- with $newer }}<a class="article-footer__neighbor" href="{{ .RelPermalink }}" rel="next" data-article-next><span>下一篇 · 较新文章 →</span><strong>{{ .Title }}</strong><time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2006-01-02" }}</time></a>{{ end -}}
+    </nav>
+    {{- end -}}
+    {{- if gt (len $related) 0 -}}
+    <section class="article-footer__related" aria-label="同标签文章"><h2>同标签文章</h2><ul>
+      {{- range $related -}}
+        <li><a href="{{ .page.RelPermalink }}" data-article-related><strong>{{ .page.Title }}</strong><span>共同标签：{{ delimit .tags "、" }}</span>{{ if .page.Params.protected }}<span>受保护文章，需密码阅读。</span>{{ end }}</a></li>
+      {{- end -}}
+    </ul></section>
+    {{- end -}}
+  </footer>
+  {{- end -}}
+{{- end -}}

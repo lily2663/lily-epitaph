@@ -1,0 +1,33 @@
+{{ define "main" }}
+{{- $posts := where site.RegularPages "Section" "posts" -}}
+{{- $posts = where $posts "Draft" false -}}
+{{- $posts = where $posts "PublishDate" "le" now -}}
+{{- $posts = where $posts "Date" "le" now -}}
+<section class="archives-page" aria-labelledby="archives-title" data-archive-total="{{ len $posts }}">
+  <header class="archives-page__head">
+    <p class="kicker">ARCHIVE · 按时间重读</p>
+    <h1 id="archives-title">{{ .Title }}</h1>
+    <p class="muted">{{ len $posts }} 篇已发布文章，按年份整理。</p>
+  </header>
+  {{ if $posts }}
+    {{ range $posts.GroupByDate "2006" "desc" }}
+    <section class="archive-year" aria-labelledby="archive-year-{{ .Key }}" data-archive-year="{{ .Key }}">
+      <h2 id="archive-year-{{ .Key }}">{{ .Key }} <span>{{ len .Pages }} 篇</span></h2>
+      <ol class="archive-list">
+        {{ range .Pages.ByDate.Reverse }}
+        <li class="archive-entry">
+          <a class="archive-link" href="{{ .RelPermalink }}">
+            <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "01月02日" }}</time>
+            <span class="archive-title">{{ .Title }}</span>
+            {{ if .Params.protected }}<span class="lock-chip">受保护</span>{{ end }}
+          </a>
+        </li>
+        {{ end }}
+      </ol>
+    </section>
+    {{ end }}
+  {{ else }}
+    <p class="archive-empty">还没有已发布的文章。<a href="{{ site.Home.RelPermalink }}">回到首页</a></p>
+  {{ end }}
+</section>
+{{ end }}

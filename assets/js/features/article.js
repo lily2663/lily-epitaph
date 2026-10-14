@@ -1,3 +1,20 @@
+import { loadLegacyHighlighter } from './legacy-highlighter.js';
+
+const pendingLegacyHighlights = new WeakSet();
+
+function highlightLegacyCode(code, pre) {
+  if (code.dataset.highlighted || pendingLegacyHighlights.has(code)) return;
+  pendingLegacyHighlights.add(code);
+  void loadLegacyHighlighter().then((highlighter) => {
+    // PJAX can remove an article while its optional runtime is still loading.
+    if (!code.isConnected || !pre.isConnected || !pre.contains(code) || code.dataset.highlighted) return;
+    highlighter.highlightElement(code);
+    if (code.result?.language) pre.dataset.language = code.result.language;
+  }).catch(() => {
+    // Plain code and its copy control remain usable; a later enhancement retries.
+  }).finally(() => { pendingLegacyHighlights.delete(code); });
+}
+
 export function ensureHeadingIds(articleBody) {
   const used = new Set([...document.querySelectorAll('[id]')].map((element) => element.id));
   return [...articleBody.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((heading, index) => {
@@ -27,8 +44,13 @@ export function enhanceArticleBody(articleBody) {
     }
   });
 
-  if (document.body.dataset.codeCopy === 'false') return;
   articleBody.querySelectorAll('pre').forEach((pre) => {
+    const code = pre.querySelector('code');
+    const language = code ? [...code.classList].find((name) => name.startsWith('language-'))?.slice(9) : '';
+    if (language) pre.dataset.language = language;
+    else if (code) highlightLegacyCode(code, pre);
+
+    if (document.body.dataset.codeCopy === 'false') return;
     if (pre.dataset.codeEnhanced === 'true') return;
     pre.dataset.codeEnhanced = 'true';
 
@@ -36,14 +58,6 @@ export function enhanceArticleBody(articleBody) {
     button.className = 'code-copy';
     button.type = 'button';
     button.textContent = '复制';
-
-    const code = pre.querySelector('code');
-    let language = code ? [...code.classList].find((name) => name.startsWith('language-'))?.slice(9) : '';
-    if (!language && code && window.hljs && !code.dataset.highlighted) {
-      window.hljs.highlightElement(code);
-      language = code.result?.language || '';
-    }
-    if (language) pre.dataset.language = language;
 
     button.addEventListener('click', async () => {
       try {

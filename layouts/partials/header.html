@@ -13,15 +13,16 @@
     </nav>
     <div class="header-actions">
       {{ if and .Site.Params.search.enabled (ne $config.showSearch false) }}
-      <div class="search-box">
+      <form class="search-box" action="{{ "/search/" | relURL }}" method="get" role="search" data-site-search>
         <div class="search-mode" role="group" aria-label="搜索范围">
           <button class="search-mode-btn active" type="button" data-search-mode="article" aria-pressed="true">文章</button>
           <button class="search-mode-btn" type="button" data-search-mode="text" aria-pressed="false">文字</button>
         </div>
         <label class="sr-only" for="search">搜索博客</label>
-        <input id="search" class="search" type="search" placeholder="搜索文章标题/标签…" autocomplete="off" aria-controls="post-grid" aria-describedby="search-status">
+        <input id="search" name="q" class="search" type="search" placeholder="搜索文章标题/标签…" autocomplete="off"{{ if or .IsHome (eq .Layout "search") }} aria-controls="post-grid"{{ end }} aria-describedby="search-status">
+        <input type="hidden" name="mode" value="article" data-search-mode-field>
         <span class="sr-only" id="search-status" aria-live="polite"></span>
-      </div>
+      </form>
       {{ end }}
       {{ if ne $config.showThemeToggle false }}
       <button id="theme-toggle" class="icon-btn theme-toggle" type="button" aria-label="切换主题">

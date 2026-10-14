@@ -1,7 +1,17 @@
 {{ $config := .Config }}
 {{ with .Page }}
+{{- $archive := site.GetPage "/archives" -}}
+{{- $rss := site.Home.OutputFormats.Get "RSS" -}}
+{{- $showArchives := and (ne $config.showArchives false) $archive -}}
+{{- $showRSS := and (ne $config.showRSS false) $rss -}}
 <footer class="site-footer">
   <div class="container">
+    {{ if or $showArchives $showRSS }}
+    <nav class="site-footer__discovery" aria-label="继续阅读与订阅">
+      {{ if $showArchives }}<a href="{{ $archive.RelPermalink }}">文章归档</a>{{ end }}
+      {{ if $showRSS }}<a href="{{ $rss.RelPermalink }}" type="application/rss+xml" data-no-pjax>RSS 订阅</a>{{ end }}
+    </nav>
+    {{ end }}
     {{ if ne $config.showCopyright false }}<p>© {{ now.Year }} {{ .Site.Title }}{{ with .Site.Params.footer.copyright }} · {{ . }}{{ end }}</p>{{ end }}
     {{ if ne $config.showNote false }}{{ with .Site.Params.footer.note }}<p class="muted">{{ . }}</p>{{ end }}{{ end }}
   </div>

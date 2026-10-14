@@ -1,0 +1,19 @@
+{{ define "main" }}
+{{- $posts := where .Site.RegularPages "Section" "posts" -}}
+<section class="search-page" data-search-page aria-labelledby="search-page-title">
+  <header class="search-page__head">
+    <p class="kicker">SEARCH · 找到想读的文章</p>
+    <h1 id="search-page-title">{{ .Title }}</h1>
+    <p>按标题、标签和摘要查找文章，也可以切换到「文字」搜索公开正文。</p>
+  </header>
+  {{ if .Site.Params.search.enabled }}
+  <div class="section-head"><h2><span data-search-title>搜索文章</span> <span class="muted" data-search-count>{{ len $posts }} 篇可搜索</span></h2></div>
+  <p class="search-page__hint" data-search-hint><a href="#search">在页眉输入关键词</a>，按 Enter 开始搜索。</p>
+  <div class="front-grid" id="post-grid" data-post-grid data-post-total="{{ len $posts }}"></div>
+  <p class="search-empty" hidden></p>
+  <noscript><p>站内搜索需要 JavaScript。你仍可通过<a href="{{ "/posts/" | relURL }}">文章列表</a>或<a href="{{ "/tags/" | relURL }}">标签</a>查找文章。</p></noscript>
+  {{ else }}
+  <p>站内搜索暂未启用，可以浏览<a href="{{ "/posts/" | relURL }}">文章列表</a>或<a href="{{ "/tags/" | relURL }}">标签</a>。</p>
+  {{ end }}
+</section>
+{{ end }}

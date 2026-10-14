@@ -2,10 +2,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {{- $isArticle := and .IsPage (eq .Section "posts") -}}
 {{- $pageTitle := cond .IsHome .Site.Title .Title -}}
-{{- $description := .Description | default .Params.summary | default .Site.Params.description | plainify -}}
+{{- $description := .Description | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
+{{- if not $description -}}
+  {{- $description = .Params.summary | default "" | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
+{{- end -}}
+{{- /* Only public articles may derive metadata from their rendered summary. */ -}}
+{{- if and (not $description) $isArticle (not .Params.protected) -}}
+  {{- $summary := .Summary | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
+  {{- $description = printf "%.160s" $summary -}}
+  {{- if ne $description $summary }}{{ $description = printf "%s…" $description }}{{ end -}}
+{{- end -}}
+{{- if not $description -}}
+  {{- $description = .Site.Params.description | default .Site.Title | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
+{{- end -}}
 <meta name="description" content="{{ $description }}">
+{{ if or (eq .Kind "404") (eq .Layout "search") }}<meta name="robots" content="noindex,follow">{{ end }}
 <meta name="theme-color" content="{{ .Site.Params.theme.accent | default "#7FB5B0" }}">
 <link rel="canonical" href="{{ .Permalink }}">
+{{- $rss := .OutputFormats.Get "RSS" -}}
+{{- if not $rss }}{{ $rss = .Site.Home.OutputFormats.Get "RSS" }}{{ end -}}
+{{- with $rss }}
+<link rel="alternate" type="application/rss+xml" title="{{ $.Site.Title }}" href="{{ .Permalink }}">
+{{- end }}
 <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} · {{ .Site.Title }}{{ end }}</title>
 {{- $cover := .Params.cover | default .Site.Params.avatar -}}
 <meta property="og:type" content="{{ if $isArticle }}article{{ else }}website{{ end }}">
@@ -33,6 +51,8 @@
   "css/theme/layout.css"
   "css/theme/content.css"
   "css/theme/pages.css"
+  "css/theme/discovery.css"
+  "css/theme/search.css"
   "css/theme/enhancements.css"
   "css/theme/responsive.css"
   "css/theme/lightbox.css"
@@ -115,7 +135,7 @@
     {{- with $theme.darkCodeBackground }}{{ if findRE `^#[0-9A-Fa-f]{6}$` . }}--code-bg:{{ . }};--lily-bg-code:{{ . }};{{ end }}{{ end -}}
   }
 </style>
-<script>document.documentElement.dataset.theme=localStorage.getItem('blog-theme')||((matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');</script>
+<script>(()=>{let theme;try{theme=localStorage.getItem('blog-theme');}catch{}document.documentElement.dataset.theme=theme==='light'||theme==='dark'?theme:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');})();</script>
 {{- $viewTransitions := true -}}
 {{- with .Site.Params.features }}{{ if isset . "viewTransition" }}{{ $viewTransitions = .viewTransition }}{{ end }}{{ end -}}
 {{ if not $viewTransitions }}<style>@view-transition { navigation: none; }</style>{{ end }}

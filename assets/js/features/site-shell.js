@@ -1,3 +1,5 @@
+import { readStorage, writeStorage } from './storage.js';
+
 export function initSiteShell({ root, siteHeader }) {
   const syncHeaderClearance = () => {
     if (siteHeader) root.style.setProperty('--header-clearance', `${Math.ceil(siteHeader.getBoundingClientRect().height) + 16}px`);
@@ -39,7 +41,7 @@ export function initSiteShell({ root, siteHeader }) {
   }
 
   const splash = document.querySelector('#welcome-splash');
-  if (splash && !sessionStorage.getItem('lily-welcomed')) {
+  if (splash && !readStorage('sessionStorage', 'lily-welcomed')) {
     let dismissed = false;
     const previousActiveElement = document.activeElement;
     splash.hidden = false;
@@ -48,7 +50,7 @@ export function initSiteShell({ root, siteHeader }) {
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
-      sessionStorage.setItem('lily-welcomed', '1');
+      writeStorage('sessionStorage', 'lily-welcomed', '1');
       document.body.classList.remove('splash-active');
       splash.classList.add('hidden');
       if (previousActiveElement instanceof HTMLElement && previousActiveElement !== document.body && previousActiveElement.isConnected) {
@@ -64,7 +66,7 @@ export function initSiteShell({ root, siteHeader }) {
   const applyTheme = (theme, event) => {
     const swap = () => {
       root.dataset.theme = theme;
-      localStorage.setItem('blog-theme', theme);
+      writeStorage('localStorage', 'blog-theme', theme);
       if (themeButton) themeButton.setAttribute('aria-label', theme === 'dark' ? '切换到日间模式' : '切换到夜间模式');
       syncBackgroundVideos();
     };

@@ -2,7 +2,7 @@ id: article-meta
 name: Article Meta
 version: 0.1.0
 type: content
-description: 文章元信息：返回链接、日期、标题、标签、阅读时长与字数
+description: 文章元信息：返回链接、发布日期、真实更新时间、标题、标签、阅读时长与字数
 context: article
 allowedSlots:
   - article.header
@@ -11,6 +11,7 @@ template:
 defaults:
   showBackLink: true
   showDate: true
+  showUpdate: true
   showTags: true
   showStats: true
 schema:
@@ -20,6 +21,10 @@ schema:
   showDate:
     type: boolean
     label: 显示日期
+  showUpdate:
+    type: boolean
+    label: 显示更新时间
+    help: 仅在 lastmod 晚于发布日期时显示。
   showTags:
     type: boolean
     label: 显示标签

@@ -1,0 +1,68 @@
+/* ---------- Archives and subscription discovery ---------- */
+.archives-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+}
+.archives-page__head {
+  padding-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+}
+.archives-page__head h1 {
+  margin: 8px 0 12px;
+  font-family: var(--serif);
+  font-size: clamp(26px, 4vw, 34px);
+}
+.archives-page__head .muted { margin: 0; }
+.archive-year { margin-top: 32px; }
+.archive-year h2 {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-size: 24px;
+}
+.archive-year h2 span {
+  margin-left: 8px;
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 400;
+}
+.archive-list { margin: 0; padding: 0; list-style: none; }
+.archive-entry { border-bottom: 1px solid var(--border-light); }
+.archive-link {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding: 16px 0;
+  color: var(--ink);
+}
+.archive-link time {
+  flex: 0 0 76px;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.archive-title { overflow-wrap: anywhere; }
+.archive-link:hover .archive-title { color: var(--mint-dark); }
+.archive-link .lock-chip { flex: 0 0 auto; }
+.archive-empty { padding: 40px 0; color: var(--muted); }
+.site-footer__discovery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 24px;
+  margin-bottom: 16px;
+}
+.site-footer__discovery a { padding: 4px 0; }
+@media (max-width: 640px) {
+  .nav { flex-wrap: wrap; row-gap: 4px; }
+  .archive-link { gap: 12px; flex-wrap: wrap; }
+  .archive-link time { flex-basis: 70px; }
+  .archive-title { flex: 1 1 calc(100% - 90px); }
+  .archive-link .lock-chip { margin-left: 82px; }
+}

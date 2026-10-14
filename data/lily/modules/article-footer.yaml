@@ -1,0 +1,40 @@
+apiVersion: lily-module/v1
+id: article-footer
+name: Article Footer
+version: 1.0.0
+category: content
+icon: "↗"
+description: 文章永久链接、按发布日期排列的上下篇，以及具有相同标签的相关文章。
+context: article
+allowedSlots:
+  - article.after
+template:
+  partial: lily/modules/article-footer/render.html
+assets:
+  styles:
+    - lily/modules/article-footer.css
+  scripts:
+    - lily/modules/article-footer.js
+defaults:
+  showPermalink: true
+  showNavigation: true
+  showRelated: true
+  relatedLimit: 3
+schema:
+  showPermalink:
+    type: boolean
+    label: 显示永久链接与复制按钮
+  showNavigation:
+    type: boolean
+    label: 显示上一篇与下一篇
+    help: 按发布日期排序，仅包含已经发布的文章。
+  showRelated:
+    type: boolean
+    label: 显示同标签文章
+    help: 只显示至少有一个相同标签的文章，无匹配项时隐藏。
+  relatedLimit:
+    type: number
+    label: 同标签文章数量
+    min: 1
+    max: 3
+    step: 1
