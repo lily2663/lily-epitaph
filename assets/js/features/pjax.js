@@ -26,6 +26,12 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
   let fadeTimer = 0;
   let pathKey = location.pathname + location.search;
 
+  // Search edits replace the current URL while retaining this same app DOM.
+  // Keep anchor/back handling aligned with that entry instead of fetching it.
+  document.addEventListener('lily:search-url-change', () => {
+    pathKey = location.pathname + location.search;
+  });
+
   history.scrollRestoration = 'manual';
 
   function syncPageScripts(newDoc) {

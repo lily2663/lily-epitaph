@@ -15,6 +15,52 @@ export function createPostSearch({ attachPixelSprite }) {
   let searchGrid = null;
   let originalPostCards = [];
   let mode = 'article';
+  let composing = false;
+
+  function syncSearchUrl() {
+    if (!dedicatedPage || !search) return;
+    const url = new URL(location.href);
+    const query = search.value.trim();
+    if (query) url.searchParams.set('q', query);
+    else url.searchParams.delete('q');
+    url.searchParams.set('mode', mode);
+    // Editing a query updates this history entry, without adding one per key.
+    // Keep PJAX's scroll state so returning from an article restores the page.
+    if (url.href !== location.href) {
+      try {
+        history.replaceState(history.state, '', url.href);
+        document.dispatchEvent(new CustomEvent('lily:search-url-change'));
+      } catch { /* Search still works if history is unavailable. */ }
+    }
+  }
+
+  function appendHighlighted(node, text, query) {
+    const value = String(text || '');
+    const needle = query.toLowerCase();
+    const lower = value.toLowerCase();
+    let start = 0;
+    let found = needle ? lower.indexOf(needle) : -1;
+    while (found !== -1) {
+      node.append(document.createTextNode(value.slice(start, found)));
+      const mark = document.createElement('mark');
+      mark.textContent = value.slice(found, found + query.length);
+      node.append(mark);
+      start = found + query.length;
+      found = lower.indexOf(needle, start);
+    }
+    node.append(document.createTextNode(value.slice(start)));
+  }
+
+  function resultExcerpt(item, query, activeMode) {
+    const summary = String(item?.summary || '').replace(/\s+/g, ' ').trim();
+    const body = activeMode === 'text' ? String(item?.text || '').replace(/\s+/g, ' ').trim() : '';
+    const text = summary.toLowerCase().includes(query) ? summary
+      : (body.toLowerCase().includes(query) ? body : summary);
+    const hit = text.toLowerCase().indexOf(query);
+    const start = Math.max(0, hit - 45);
+    const end = Math.min(text.length, Math.max(start + 140, hit + query.length));
+    return `${start ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`;
+  }
 
   function updateSearchState(query, visible, total) {
     if (!query) {
@@ -38,6 +84,8 @@ export function createPostSearch({ attachPixelSprite }) {
   async function filterPosts() {
     const version = ++searchVersion;
     if (!search) return;
+    if (composing) return;
+    syncSearchUrl();
     if (!grid) {
       if (searchStatus) searchStatus.textContent = search.value.trim() ? '按 Enter 搜索全站。' : '';
       return;
@@ -113,12 +161,15 @@ export function createPostSearch({ attachPixelSprite }) {
       kicker.textContent = (Array.isArray(item?.tags) ? item.tags[0] : '') || '随笔';
       const title = document.createElement('h3');
       title.className = 'item-title';
-      title.textContent = item?.title || '未命名文章';
+      appendHighlighted(title, item?.title || '未命名文章', query);
       const excerpt = document.createElement('p');
       excerpt.className = 'item-excerpt';
-      excerpt.textContent = item?.protected
-        ? (item.protectionEnabled === false ? '该受保护文章暂时不可阅读，功能维护中。' : '该文章已加密，需输入密码查看。')
-        : String(item?.summary || '').slice(0, 140);
+      if (item?.protected) {
+        excerpt.textContent = item.protectionEnabled === false
+          ? '该受保护文章暂时不可阅读，功能维护中。' : '该文章已加密，需输入密码查看。';
+      } else {
+        appendHighlighted(excerpt, resultExcerpt(item, query, activeMode), query);
+      }
       link.append(kicker, title, excerpt);
       card.append(link);
       attachPixelSprite(card);
@@ -144,6 +195,10 @@ export function createPostSearch({ attachPixelSprite }) {
   }));
 
   searchForm?.addEventListener('submit', (event) => {
+    if (composing) {
+      event.preventDefault();
+      return;
+    }
     // Other pages use a normal GET navigation; search works throughout the site
     // without replacing an article's content with an ad-hoc results container.
     if (!grid) return;
@@ -152,11 +207,25 @@ export function createPostSearch({ attachPixelSprite }) {
     void filterPosts();
   });
 
-  search?.addEventListener('input', () => {
+  function scheduleSearch() {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => void filterPosts(), 80);
+    if (!composing) searchTimer = setTimeout(() => void filterPosts(), 80);
+  }
+  search?.addEventListener('compositionstart', () => {
+    composing = true;
+    ++searchVersion;
+    clearTimeout(searchTimer);
+  });
+  search?.addEventListener('compositionend', () => {
+    composing = false;
+    scheduleSearch();
+  });
+  search?.addEventListener('input', (event) => {
+    if (event.isComposing) return;
+    scheduleSearch();
   });
   search?.addEventListener('keydown', (event) => {
+    if (composing || event.isComposing || event.keyCode === 229) return;
     if (event.key === 'Enter') {
       if (!grid) return;
       event.preventDefault();
@@ -172,7 +241,7 @@ export function createPostSearch({ attachPixelSprite }) {
     }
   });
   document.addEventListener('keydown', (event) => {
-    if (!search || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (!search || composing || event.isComposing || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
     const editable = event.target instanceof HTMLElement
       && (event.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName));
     if (event.key === '/' && !editable) {
@@ -188,6 +257,7 @@ export function createPostSearch({ attachPixelSprite }) {
 
   function refreshPageBindings() {
     ++searchVersion;
+    composing = false;
     clearTimeout(searchTimer);
     grid = document.querySelector('[data-post-grid]');
     if (search) {

@@ -21,6 +21,12 @@
 .search-page .section-head h2 { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .search-page [data-search-count] { font-family: var(--sans); font-size: 14px; font-weight: 400; }
 .search-page .post-item { min-width: 0; overflow-wrap: anywhere; }
+.post-link mark {
+  padding-inline: 1px;
+  border-radius: 2px;
+  background: var(--mint);
+  color: #15251c;
+}
 .not-found__search {
   display: flex;
   justify-content: center;

@@ -2,19 +2,36 @@
 {{- if and $resource (reflect.IsImageResourceProcessable $resource) (ne $resource.MediaType.SubType "gif") -}}
   {{- $small := $resource.Resize (printf "%dx webp q82" (int (math.Min 720 $resource.Width))) -}}
   {{- $large := $resource.Resize (printf "%dx webp q82" (int (math.Min 1280 $resource.Width))) -}}
-  <img src="{{ $large.RelPermalink }}" srcset="{{ $small.RelPermalink }} {{ $small.Width }}w{{ if ne $small.Width $large.Width }}, {{ $large.RelPermalink }} {{ $large.Width }}w{{ end }}" sizes="(max-width: 760px) 100vw, 760px" width="{{ $large.Width }}" height="{{ $large.Height }}" alt="{{ .Text }}" loading="lazy" decoding="async" {{ with .Title }}title="{{ . }}"{{ end }}>
+  <img src="{{ $large.RelPermalink }}" srcset="{{ $small.RelPermalink }} {{ $small.Width }}w{{ if ne $small.Width $large.Width }}, {{ $large.RelPermalink }} {{ $large.Width }}w{{ end }}" sizes="(max-width: 760px) 100vw, 760px" data-original-src="{{ $resource.RelPermalink }}" width="{{ $large.Width }}" height="{{ $large.Height }}" alt="{{ .Text }}" loading="lazy" decoding="async" {{ with .Title }}title="{{ . }}"{{ end }}>
 {{- else -}}
   {{- $dimensions := dict -}}
+  {{- $srcset := slice -}}
   {{- if and $resource (reflect.IsImageResourceWithMeta $resource) -}}
     {{- $dimensions = dict "Width" $resource.Width "Height" $resource.Height -}}
   {{- else -}}
     {{- /* Static images keep their existing URLs; reserve space before lazy loading.
           Read only known local raster paths, never remote URLs or traversal paths. */ -}}
-    {{- $imagePath := (urls.Parse .Destination).Path -}}
+    {{- $destination := urls.Parse .Destination -}}
+    {{- $imagePath := $destination.Path -}}
     {{- $staticPath := printf "static%s" $imagePath -}}
-    {{- if and (hasPrefix $imagePath "/assets/") (not (in $imagePath "..")) (in (slice ".png" ".jpg" ".jpeg" ".webp" ".gif") (lower (path.Ext $imagePath))) (os.FileExists $staticPath) -}}
+    {{- if and (not $destination.Host) (not $destination.Scheme) (hasPrefix $imagePath "/assets/") (not (in $imagePath "..")) (in (slice ".png" ".jpg" ".jpeg" ".webp" ".gif") (lower (path.Ext $imagePath))) (os.FileExists $staticPath) -}}
       {{- $dimensions = images.Config $staticPath -}}
+      {{- /* The optional generator only references existing optimized article
+            images. Stale source hashes and absent candidates safely use src. */ -}}
+      {{- $variants := index (hugo.Data.image_variants.images | default dict) $imagePath -}}
+      {{- if and $variants (eq $variants.sha256 (crypto.SHA256 (os.ReadFile $staticPath))) -}}
+        {{- range $variants.candidates -}}
+          {{- $candidatePath := printf "static%s" .url -}}
+          {{- if and (hasPrefix .url "/assets/img/responsive/") (not (in .url "..")) (gt .width 0) (lt .width $dimensions.Width) (os.FileExists $candidatePath) -}}
+            {{- $candidate := images.Config $candidatePath -}}
+            {{- if and (eq $candidate.Width (int .width)) (eq $candidate.Height (int .height)) -}}
+              {{- $srcset = $srcset | append (printf "%s %dw" .url (int .width)) -}}
+            {{- end -}}
+          {{- end -}}
+        {{- end -}}
+        {{- if gt (len $srcset) 0 }}{{ $srcset = $srcset | append (printf "%s %dw" $.Destination $dimensions.Width) }}{{ end -}}
+      {{- end -}}
     {{- end -}}
   {{- end -}}
-  <img src="{{ if $resource }}{{ $resource.RelPermalink }}{{ else }}{{ .Destination | safeURL }}{{ end }}" {{ with $dimensions }}width="{{ .Width }}" height="{{ .Height }}"{{ end }} alt="{{ .Text }}" loading="lazy" decoding="async" {{ with .Title }}title="{{ . }}"{{ end }}>
+  <img src="{{ if $resource }}{{ $resource.RelPermalink }}{{ else }}{{ .Destination | safeURL }}{{ end }}" {{ if gt (len $srcset) 0 }}srcset="{{ delimit $srcset ", " }}" sizes="(max-width: 760px) calc(100vw - 32px), 760px"{{ end }} data-original-src="{{ if $resource }}{{ $resource.RelPermalink }}{{ else }}{{ .Destination | safeURL }}{{ end }}" {{ with $dimensions }}width="{{ .Width }}" height="{{ .Height }}"{{ end }} alt="{{ .Text }}" loading="lazy" decoding="async" {{ with .Title }}title="{{ . }}"{{ end }}>
 {{- end -}}

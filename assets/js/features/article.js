@@ -1,18 +1,137 @@
 import { loadLegacyHighlighter } from './legacy-highlighter.js';
 
-const pendingLegacyHighlights = new WeakSet();
+const legacyArticleQueues = new WeakMap();
+const activeLegacyQueues = new Set();
+let legacyPageSwapBound = false;
 
-function highlightLegacyCode(code, pre) {
-  if (code.dataset.highlighted || pendingLegacyHighlights.has(code)) return;
-  pendingLegacyHighlights.add(code);
-  void loadLegacyHighlighter().then((highlighter) => {
-    // PJAX can remove an article while its optional runtime is still loading.
-    if (!code.isConnected || !pre.isConnected || !pre.contains(code) || code.dataset.highlighted) return;
-    highlighter.highlightElement(code);
-    if (code.result?.language) pre.dataset.language = code.result.language;
-  }).catch(() => {
-    // Plain code and its copy control remain usable; a later enhancement retries.
-  }).finally(() => { pendingLegacyHighlights.delete(code); });
+function createLegacyQueue(articleBody) {
+  const pending = new Map();
+  const targets = new Map();
+  const ready = new Set();
+  let cancelled = false;
+  let loading = false;
+  let highlighter = null;
+  let scheduled = null;
+  let idleCallback = false;
+  let observer = null;
+
+  function release(code) {
+    const pre = pending.get(code);
+    if (pre) {
+      observer?.unobserve(pre);
+      targets.delete(pre);
+    }
+    pending.delete(code);
+    ready.delete(code);
+  }
+
+  function cancel() {
+    cancelled = true;
+    observer?.disconnect();
+    if (scheduled !== null) {
+      if (idleCallback && typeof cancelIdleCallback === 'function') cancelIdleCallback(scheduled);
+      else if (!idleCallback) clearTimeout(scheduled);
+    }
+    scheduled = null;
+    pending.clear();
+    targets.clear();
+    ready.clear();
+    activeLegacyQueues.delete(queue);
+    legacyArticleQueues.delete(articleBody);
+  }
+
+  function drain(deadline) {
+    scheduled = null;
+    if (cancelled) return;
+    const started = performance.now();
+    let processed = 0;
+    // A single autodetection cannot be interrupted. Bound every slice by both
+    // count and elapsed time, even when the browser reports a large idle budget.
+    while (ready.size && processed < 2) {
+      if (processed && (performance.now() - started >= 4
+        || (deadline && !deadline.didTimeout && deadline.timeRemaining() < 1))) break;
+      const code = ready.values().next().value;
+      const pre = pending.get(code);
+      ready.delete(code);
+      if (pre && code.isConnected && pre.isConnected && pre.contains(code) && !code.dataset.highlighted) {
+        try {
+          highlighter.highlightElement(code);
+          if (code.result?.language) pre.dataset.language = code.result.language;
+        } catch {
+          // Keep readable/copyable code; a later enhancement can retry this block.
+        }
+        processed++;
+      }
+      release(code);
+    }
+    if (!pending.size) cancel();
+    else schedule();
+  }
+
+  function schedule() {
+    if (cancelled || scheduled !== null || loading || !ready.size) return;
+    if (!highlighter) {
+      loading = true;
+      void loadLegacyHighlighter().then((runtime) => {
+        loading = false;
+        if (cancelled) return;
+        highlighter = runtime;
+        schedule();
+      }).catch(() => {
+        // Retry on another intersection or enhance call, never in a tight loop.
+        loading = false;
+      });
+      return;
+    }
+    idleCallback = typeof requestIdleCallback === 'function';
+    scheduled = idleCallback
+      ? requestIdleCallback(drain, { timeout: 150 })
+      : setTimeout(() => drain(), 16);
+  }
+
+  if (typeof window.IntersectionObserver === 'function') {
+    observer = new window.IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const code = targets.get(entry.target);
+        if (!code) continue;
+        if (entry.isIntersecting) ready.add(code);
+        else ready.delete(code);
+      }
+      schedule();
+    }, { rootMargin: '600px 0px' });
+  }
+
+  const queue = {
+    cancel,
+    add(code, pre) {
+      if (cancelled || code.dataset.highlighted || !code.isConnected || !pre.isConnected) return;
+      if (!pending.has(code)) {
+        pending.set(code, pre);
+        targets.set(pre, code);
+        if (observer) observer.observe(pre);
+        else ready.add(code);
+      }
+      schedule();
+    },
+  };
+  activeLegacyQueues.add(queue);
+  return queue;
+}
+
+function highlightLegacyCode(articleBody, code, pre) {
+  if (code.dataset.highlighted) return;
+  if (!legacyPageSwapBound) {
+    document.addEventListener('lily:before-page-swap', () => {
+      for (const queue of activeLegacyQueues) queue.cancel();
+    });
+    legacyPageSwapBound = true;
+  }
+  let queue = legacyArticleQueues.get(articleBody);
+  if (!queue) {
+    queue = createLegacyQueue(articleBody);
+    legacyArticleQueues.set(articleBody, queue);
+  }
+  queue.add(code, pre);
 }
 
 export function ensureHeadingIds(articleBody) {
@@ -48,7 +167,7 @@ export function enhanceArticleBody(articleBody) {
     const code = pre.querySelector('code');
     const language = code ? [...code.classList].find((name) => name.startsWith('language-'))?.slice(9) : '';
     if (language) pre.dataset.language = language;
-    else if (code) highlightLegacyCode(code, pre);
+    else if (code) highlightLegacyCode(articleBody, code, pre);
 
     if (document.body.dataset.codeCopy === 'false') return;
     if (pre.dataset.codeEnhanced === 'true') return;
@@ -144,7 +263,7 @@ export function installArticleLightbox() {
   const open = (image) => {
     trigger = image;
     const preview = box.querySelector('img');
-    preview.src = image.currentSrc || image.src;
+    preview.src = image.dataset.originalSrc || image.currentSrc || image.src;
     preview.alt = image.alt || '图片预览';
     box.showModal();
     box.classList.add('active');
