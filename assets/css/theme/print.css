@@ -1,0 +1,240 @@
+/* Loaded after screen styles and theme overrides. Keep this file print-only,
+   including when a consumer inlines or bundles it without the link's media. */
+@media print {
+  @page { size: auto; margin: 16mm 14mm 18mm; }
+
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light !important;
+    --bg: #fff !important;
+    --bg-card: #fff !important;
+    --bg-hover: #fff !important;
+    --code-bg: #fff !important;
+    --ink: #000 !important;
+    --ink-soft: #000 !important;
+    --muted: #000 !important;
+    --border: #aaa !important;
+    --code-border: #aaa !important;
+    --lily-bg-page: #fff !important;
+    --lily-bg-card: #fff !important;
+    --lily-bg-hover: #fff !important;
+    --lily-bg-code: #fff !important;
+    --lily-color-text: #000 !important;
+    --lily-color-text-soft: #000 !important;
+    --lily-color-muted: #000 !important;
+    --lily-color-border: #aaa !important;
+    --lily-color-border-light: #aaa !important;
+  }
+
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html,
+  body {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+  }
+
+  body::before,
+  body::after { content: none !important; display: none !important; }
+
+  /* A welcome fade or an open mobile panel must not blank/clip the paper. */
+  body #app {
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: none !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  #app,
+  .container,
+  .article,
+  .lily-composed,
+  .lily-slot,
+  .lily-module,
+  .article-layout,
+  .article-body {
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .site-header,
+  .site-footer,
+  [data-lily-slot="global.header"],
+  [data-lily-slot="global.footer"],
+  [data-lily-slot$=".sidebar"],
+  [data-lily-slot="home.hero"],
+  [data-lily-slot="article.after"],
+  .welcome-splash,
+  .site-background-media,
+  .reading-progress,
+  .navigation-progress,
+  .to-top,
+  .skip-link,
+  .back-link,
+  .article-tags,
+  .toc-wrap,
+  .toc-toggle,
+  .code-copy,
+  .pixel-sprite,
+  .tuanzi,
+  .mobile-hub-bar,
+  .mobile-hub-backdrop,
+  .lily-music-dock,
+  .article-footer,
+  .comment-section,
+  .lightbox,
+  dialog,
+  .lock-form,
+  .lock-status,
+  audio,
+  video { display: none !important; }
+
+  dialog::backdrop { display: none !important; background: transparent !important; }
+
+  /* Never turn a locked article (or any other hidden region) into print content.
+     The #app specificity also beats the layout reset above. Unlocked content
+     prints normally after protected.js removes its hidden attribute. */
+  [hidden],
+  html body #app [hidden],
+  html body #app [data-protected-layout][hidden] { display: none !important; }
+
+  .article-head {
+    max-width: none !important;
+    margin: 0 0 6mm !important;
+    text-align: left !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+  .article-head h1 { margin: 2mm 0 !important; font-size: 22pt !important; line-height: 1.2 !important; }
+  .dateline,
+  .article-stats { font-size: 9pt !important; }
+
+  .article-head,
+  .article-head *,
+  .article-body,
+  .article-body *,
+  .lock-box,
+  .lock-box * { color: #000 !important; background: transparent !important; }
+
+  .article-body { font-size: 11pt !important; line-height: 1.5 !important; }
+  .article-body :is(h1, h2, h3, h4, h5, h6) {
+    margin: 5mm 0 2mm !important;
+    line-height: 1.3 !important;
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+  .article-body h1 { font-size: 18pt !important; }
+  .article-body h2 { font-size: 15pt !important; }
+  .article-body h3 { font-size: 13pt !important; }
+  .article-body :is(h4, h5, h6) { font-size: 11pt !important; }
+  .article-body p,
+  .article-body li { orphans: 3; widows: 3; }
+  .article-body p,
+  .article-body ul,
+  .article-body ol,
+  .article-body blockquote { margin-top: 2.5mm !important; margin-bottom: 2.5mm !important; }
+  .article-body blockquote { border-left: 2pt solid #aaa !important; padding: 1mm 3mm !important; }
+  .article-body hr { border-top: .5pt solid #aaa !important; margin: 5mm 0 !important; }
+  .article-body hr::after,
+  .article-body pre::before { content: none !important; }
+
+  /* Long code must paginate instead of becoming a clipped scrolling surface. */
+  .article-body .highlight,
+  .article-body pre {
+    max-height: none !important;
+    overflow: visible !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  .article-body pre {
+    margin: 3mm 0 !important;
+    padding: 3mm !important;
+    border: .5pt solid #aaa !important;
+    border-radius: 0 !important;
+    font-size: 8.5pt !important;
+    line-height: 1.4 !important;
+    tab-size: 4;
+  }
+  .article-body pre,
+  .article-body pre code,
+  .article-body .chroma .line,
+  .article-body .chroma .cl {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+  .article-body pre code { padding: 0 !important; font-size: inherit !important; line-height: inherit !important; }
+  .article-body .chroma .line { display: inline !important; }
+  .article-body :not(pre) > code { overflow-wrap: anywhere; }
+
+  .article-body table {
+    display: table !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    overflow: visible !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  .article-body thead { display: table-header-group !important; }
+  .article-body tfoot { display: table-footer-group !important; }
+  .article-body tr { break-inside: avoid; page-break-inside: avoid; }
+  .article-body th,
+  .article-body td {
+    padding: 1.5mm 2mm !important;
+    border: .5pt solid #aaa !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  .article-body img,
+  .article-body svg {
+    max-width: 100% !important;
+    max-height: 230mm !important;
+    object-fit: contain;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .article-body img { width: auto; height: auto !important; border-radius: 0 !important; margin: 3mm auto !important; }
+  .article-body figure { break-inside: avoid; page-break-inside: avoid; }
+
+  .article-body a[href] { color: #000 !important; text-decoration: underline !important; overflow-wrap: anywhere; }
+  /* PDF links keep their targets. Do not duplicate every long URL on paper;
+     authors can explicitly opt in to printing a particular absolute URL. */
+  .article-body a[href]::after { content: none !important; }
+  .article-body a.print-url[href^="https://"]::after,
+  .article-body a.print-url[href^="http://"]::after { content: " (" attr(href) ")" !important; font-size: 9pt; overflow-wrap: anywhere; }
+}

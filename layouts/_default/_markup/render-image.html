@@ -16,7 +16,7 @@
     {{- $staticPath := printf "static%s" $imagePath -}}
     {{- if and (not $destination.Host) (not $destination.Scheme) (hasPrefix $imagePath "/assets/") (not (in $imagePath "..")) (in (slice ".png" ".jpg" ".jpeg" ".webp" ".gif") (lower (path.Ext $imagePath))) (os.FileExists $staticPath) -}}
       {{- $dimensions = images.Config $staticPath -}}
-      {{- /* The optional generator only references existing optimized article
+      {{- /* The optional generator only references existing local article
             images. Stale source hashes and absent candidates safely use src. */ -}}
       {{- $variants := index (hugo.Data.image_variants.images | default dict) $imagePath -}}
       {{- if and $variants (eq $variants.sha256 (crypto.SHA256 (os.ReadFile $staticPath))) -}}

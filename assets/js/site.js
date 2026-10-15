@@ -40,7 +40,10 @@ import { setupDrawerPagination } from './features/drawers.js';
   function onScroll() { if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScroll); }
   addEventListener('scroll', onScroll, { passive: true });
   updateScroll();
-  topButton?.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
+  topButton?.addEventListener('click', () => {
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  });
 
   const postSearch = createPostSearch({ attachPixelSprite });
 

@@ -144,3 +144,8 @@
   {{- $schema = merge $schema (dict "headline" .Title "datePublished" (.PublishDate.Format "2006-01-02T15:04:05Z07:00") "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00") "image" ($cover | absURL) "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink) "author" (dict "@type" "Person" "name" .Site.Params.author) "publisher" (dict "@type" "Organization" "name" .Site.Title)) -}}
 {{- end -}}
 <script type="application/ld+json">{{ $schema | jsonify | safeJS }}</script>
+{{- /* Keep print overrides after every screen stylesheet and inline theme value. */ -}}
+{{- with resources.Get "css/theme/print.css" -}}
+  {{- $print := . | minify | fingerprint -}}
+  <link rel="stylesheet" href="{{ $print.RelPermalink }}" integrity="{{ $print.Data.Integrity }}" media="print">
+{{- end -}}
