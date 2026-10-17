@@ -1,3 +1,10 @@
+{{ define "prepare" }}
+{{ .Store.Set "lily-list-body" (dict "html" (partial "lily/layout.html" (dict "kind" "terms" "page" .))) }}
+{{ end }}
 {{ define "main" }}
-{{ partial "lily/layout.html" (dict "kind" "terms" "page" .) }}
+{{- with .Store.Get "lily-list-body" -}}
+  {{ .html }}
+{{- else -}}
+  {{ partial "lily/layout.html" (dict "kind" "terms" "page" .) }}
+{{- end -}}
 {{ end }}

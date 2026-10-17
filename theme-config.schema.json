@@ -8,7 +8,7 @@
       {"path":"params.description","label":"站点描述","type":"string","help":"用于搜索与分享摘要"},
       {"path":"params.author","label":"作者","type":"string","help":"文章结构化信息中的作者名"},
       {"path":"params.avatar","label":"头像路径","type":"url","help":"从“外观”页上传后可在此微调"},
-      {"path":"params.favicon","label":"浏览器图标路径","type":"url","help":"留空时沿用作者头像；可填资源库中的 /assets/... 图片路径"}
+      {"path":"params.favicon","label":"浏览器图标路径","type":"url","help":"留空时从支持的本地静态头像生成最长边 48px 图标；远程或不适用格式沿用头像地址。显式填写的图标 URL 保持原样。"}
     ]},
     {"id":"theme","label":"主题外观","fields":[
       {"path":"params.theme.webFonts","label":"加载在线字体","type":"boolean","default":false,"help":"默认使用系统字体，减少外部请求；开启后加载 Google Fonts，访问较慢的网络可能延迟显示。字体预设仍然有效。"},

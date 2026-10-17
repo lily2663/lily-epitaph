@@ -5,6 +5,7 @@
 {{- else -}}
 {{- $pages := $page.Pages.ByDate.Reverse -}}
 {{- $pager := $page.Paginate $pages 10 -}}
+{{- $page.Store.Set "lily-pager" $pager -}}
 <section class="post-list"><h1 class="section-title">{{ $page.Title }}{{ if $cfg.showCount }} <span class="count">{{ len $pages }} 篇</span>{{ end }}</h1><div class="front-grid" id="post-grid">{{ range $pager.Pages }}{{ partial "post-card.html" . }}{{ end }}</div>
 {{ if gt $pager.TotalPages 1 }}<nav class="post-pagination" aria-label="文章翻页">
   {{ with $pager.Prev }}<a class="post-pagination__step" href="{{ .URL }}#post-grid" rel="prev">← 上一页</a>{{ else }}<span class="post-pagination__step is-disabled">← 上一页</span>{{ end }}

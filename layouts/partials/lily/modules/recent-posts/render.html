@@ -26,6 +26,7 @@
   {{- $pageSize := $cfg.pageSize | default 10 | int -}}
   {{- $pageSize = math.Max 1 (math.Min 50 $pageSize) -}}
   {{- $pager := .Page.Paginate $posts $pageSize -}}
+  {{- .Page.Store.Set "lily-pager" $pager -}}
   <section class="post-list" data-search-list>
     <h2 class="section-title"><span data-search-title>{{ $cfg.title | default "全部文章" }}</span>{{ if $cfg.showCount }} <span class="count" data-search-count>{{ len $posts }} 篇</span>{{ end }}</h2>
     <div class="front-grid" id="post-grid" data-post-grid data-post-total="{{ len $posts }}">

@@ -105,6 +105,15 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
     }, 220);
   }
 
+  function cancelPendingNavigation() {
+    if (!navAbort) return;
+    const token = ++navToken;
+    navAbort.abort();
+    navAbort = null;
+    app.classList.remove('leaving');
+    completeNavigation(token);
+  }
+
   function flashFade() {
     app.classList.remove('fade');
     void app.offsetWidth;
@@ -128,6 +137,7 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
       if (!doc.getElementById('app')) throw new Error('no app container');
     } catch (error) {
       if (token !== navToken) return;
+      navAbort = null;
       completeNavigation(token);
       if (error.name === 'AbortError') return;
       location.href = url;
@@ -156,6 +166,9 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
     syncNav(navigated.pathname);
     updateScroll();
     app.focus({ preventScroll: true });
+    // Only an unfinished page swap is cancellable. Same-page history changes
+    // after this point must still allow the committed page's deferred setup.
+    navAbort = null;
     completeNavigation(token);
 
     const settle = () => {
@@ -185,6 +198,7 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
         const anchorTarget = document.getElementById(decodeURIComponent(url.hash.slice(1)));
         if (anchorTarget) {
           event.preventDefault();
+          cancelPendingNavigation();
           history.replaceState({ scroll: scrollY }, '', location.href);
           history.pushState({ anchor: url.hash }, '', url.href);
           anchorTarget.scrollIntoView();
@@ -199,6 +213,7 @@ export function installPjaxNavigation({ initPage, updateScroll }) {
 
   addEventListener('popstate', (event) => {
     if (location.pathname + location.search === pathKey) {
+      cancelPendingNavigation();
       if (event.state?.anchor) {
         document.getElementById(decodeURIComponent(event.state.anchor.slice(1)))?.scrollIntoView();
       } else if (typeof event.state?.scroll === 'number') {

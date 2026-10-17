@@ -1,0 +1,21 @@
+{{- /* Explicit icons keep their URL/format. Only derive the default icon from
+      an existing local raster avatar; never fetch remote avatars at build time. */ -}}
+{{- $icon := .Site.Params.favicon | default .Site.Params.avatar | default "/assets/img/avatar.jpg" -}}
+{{- $type := "" -}}
+{{- $sizes := "" -}}
+{{- if not .Site.Params.favicon -}}
+  {{- $url := urls.Parse $icon -}}
+  {{- $file := printf "static%s" $url.Path -}}
+  {{- $ext := lower (path.Ext $url.Path) -}}
+  {{- if and (not $url.Host) (not $url.Scheme) (not $url.RawQuery) (hasPrefix $url.Path "/assets/") (not (in $url.Path "..")) (not (in $url.Path `\`)) (in (slice ".png" ".jpg" ".jpeg" ".webp") $ext) (os.FileExists $file) -}}
+    {{- $content := os.ReadFile $file -}}
+    {{- $image := resources.FromString (printf "icons/avatar-%s%s" (crypto.SHA256 $content) $ext) $content -}}
+    {{- if reflect.IsImageResourceProcessable $image -}}
+      {{- $small := $image.Fit "48x48 png" -}}
+      {{- $icon = $small.RelPermalink -}}
+      {{- $type = $small.MediaType.Type -}}
+      {{- $sizes = printf "%dx%d" $small.Width $small.Height -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+<link rel="icon" href="{{ $icon }}"{{ with $type }} type="{{ . }}"{{ end }}{{ with $sizes }} sizes="{{ . }}"{{ end }}>

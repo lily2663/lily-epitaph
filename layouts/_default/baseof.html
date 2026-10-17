@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="{{ .Site.Language.Lang }}">
 <head>
+  {{- /* List templates prepare their configured paginator before metadata. */ -}}
+  {{ .Store.Delete "lily-pager" }}
+  {{ block "prepare" . }}{{ end }}
   {{ partial "head.html" . }}
 </head>
 {{- $petImage := .Site.Params.pet.image | default "/lily-epitaph/tuanzi.png" -}}

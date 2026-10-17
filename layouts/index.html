@@ -1,5 +1,14 @@
-{{ define "main" }}
+{{ define "prepare" }}
 {{- /* Lily Home：页面结构由 data/lily/layouts/home.yaml 组合
+     Render once before head so metadata can use the module's actual paginator.
      hero slot 已在 baseof 中于 #app 外渲染（欢迎屏 fixed 定位需要），此处跳过 */ -}}
-{{ partial "lily/layout.html" (dict "kind" "home" "page" . "skipSlots" (slice "hero")) }}
+{{ .Store.Set "lily-list-body" (dict "html" (partial "lily/layout.html" (dict "kind" "home" "page" . "skipSlots" (slice "hero")))) }}
+{{ end }}
+{{ define "main" }}
+{{- with .Store.Get "lily-list-body" -}}
+  {{ .html }}
+{{- else -}}
+  {{- /* Preserve site base templates that do not yet call the prepare block. */ -}}
+  {{ partial "lily/layout.html" (dict "kind" "home" "page" . "skipSlots" (slice "hero")) }}
+{{- end -}}
 {{ end }}
