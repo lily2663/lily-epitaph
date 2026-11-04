@@ -1,5 +1,32 @@
+{{- /* ============================================================
+ * 站内搜索数据（公开输出）
+ *
+ * 保护边界（必须与 head / RSS 一致）：
+ *   受保护文章的 title 之外的摘要字段一律使用固定公开提示，
+ *   不输出真实 summary，也不输出正文。
+ *   data-search 等不可见属性同样属于公开 HTML，因此这里也不能留原文。
+ * ============================================================ */ -}}
+{{- $lockText := "该文章已加密，需访问网站输入密码查看。" -}}
 {{- $items := slice -}}
 {{- range (site.GetPage "section" "posts").RegularPages -}}
-  {{- $items = $items | append (dict "title" .Title "url" .RelPermalink "summary" .Params.summary "tags" .Params.tags "protected" .Params.protected "protectionEnabled" .Site.Params.protected.enabled "text" (cond .Params.protected "" (.Plain | plainify))) -}}
+  {{- $protected := false -}}
+  {{- with .Params.protected -}}{{- $protected = . -}}{{- end -}}
+  {{- $summary := "" -}}
+  {{- $text := "" -}}
+  {{- if $protected -}}
+    {{- $summary = $lockText -}}
+  {{- else -}}
+    {{- $summary = .Params.summary | default "" -}}
+    {{- $text = .Plain | plainify -}}
+  {{- end -}}
+  {{- $items = $items | append (dict
+    "title" .Title
+    "url" .RelPermalink
+    "summary" $summary
+    "tags" .Params.tags
+    "protected" $protected
+    "protectionEnabled" .Site.Params.protected.enabled
+    "text" $text
+  ) -}}
 {{- end -}}
 {{- $items | jsonify -}}

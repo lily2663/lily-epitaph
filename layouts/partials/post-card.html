@@ -1,7 +1,13 @@
 {{- $weekdays := slice "周日" "周一" "周二" "周三" "周四" "周五" "周六" -}}
 {{- $tags := .Params.tags | default slice -}}
 {{- $protectionEnabled := .Site.Params.protected.enabled -}}
-<article class="post-item" data-search="{{ printf "%s %s %s" .Title .Params.summary (delimit $tags " ") | lower }}">
+{{- /* data-search 是**公开 HTML 属性**：即使页面上显示"已加密"占位，
+      查看源码仍能读到属性值。因此受保护文章不得把真实 summary 写进这里，
+      否则保护状态形同虚设。
+      与 head.html / index.json.json 使用同一条固定占位文案，保持出口一致。 */ -}}
+{{- $searchSummary := .Params.summary -}}
+{{- if .Params.protected -}}{{- $searchSummary = "该文章已加密，需访问网站输入密码查看。" -}}{{- end -}}
+<article class="post-item" data-search="{{ printf "%s %s %s" .Title ($searchSummary | default "") (delimit $tags " ") | lower }}">
   <a class="post-link" href="{{ .RelPermalink }}">
     <div class="kicker">{{ with index .Params.tags 0 }}{{ . }}{{ else }}随笔{{ end }}</div>
     <h3 class="item-title">{{ .Title }}{{ if .Params.protected }} <span class="lock-chip">{{ if $protectionEnabled }}加密{{ else }}暂时下线{{ end }}</span>{{ end }}</h3>

@@ -1,0 +1,112 @@
+{{- /* ============================================================
+ * Feed channel 时间计算（F1-03）
+ *
+ * 输入 dict:
+ *   pages (Pages) 已过滤排序、实际会输出的 items
+ *   site  (Site)
+ *
+ * 返回 dict:
+ *   lastBuildDate (string)  RFC1123Z 形式；无可确定时间时为 ""
+ *   source        (string)  items | config | config+items | none
+ *   maxItemTime   (string)  诊断用
+ *   diagnostics   (string)  无效值的可读诊断；为空表示无问题
+ *
+ * 规则:
+ *   每个 item 的有效时间 = Lastmod（有效且不早于 PublishDate）否则 PublishDate
+ *   channel 时间 = 所有 item 有效时间的最大值
+ *   若 params.rss.updated 存在且有效、且不晚于 now，则与上式取较晚者
+ *   空 feed：有有效 updated 用 updated，否则省略 lastBuildDate
+ *
+ * 明确拒绝:
+ *   - 未来时间（lastmod / updated 晚于 now）→ 排除并诊断，不悄悄钳制
+ *   - 无法解析的时间 → 排除并诊断
+ * ============================================================ */ -}}
+{{- $pages := .pages -}}
+{{- $site := .site -}}
+{{- $now := now -}}
+{{- $diagnostics := slice -}}
+{{- /* 用 dict 承载时间，避免 Go 模板把变量静态定型为 string（后续 .Format 会失败） */ -}}
+{{- $maxHolder := dict "time" "" "source" "" -}}
+
+{{- range $pages -}}
+  {{- $page := . -}}
+  {{- $pub := $page.PublishDate -}}
+  {{- $lm := $page.Lastmod -}}
+  {{- $effective := $pub -}}
+
+  {{- if $lm -}}
+    {{- if $lm.After $now -}}
+      {{- $diagnostics = $diagnostics | append (printf "%s: lastmod=%s 位于未来，已排除" $page.RelPermalink ($lm.Format "2006-01-02T15:04:05Z07:00")) -}}
+    {{- else if $lm.Before $pub -}}
+      {{- /* 早于发布时间的 lastmod 不晚于 pubDate，按规则回退 pubDate（无需诊断） */ -}}
+    {{- else -}}
+      {{- $effective = $lm -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if $pub -}}
+    {{- if $pub.After $now -}}
+      {{- $diagnostics = $diagnostics | append (printf "%s: publishDate=%s 位于未来，已排除" $page.RelPermalink ($pub.Format "2006-01-02T15:04:05Z07:00")) -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if $effective -}}
+    {{- $cur := $maxHolder.time -}}
+    {{- if or (not $cur) ($effective.After $cur) -}}
+      {{- $maxHolder = dict "time" $effective "source" $page.RelPermalink -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 可选 params.rss.updated：一次真实 feed 内容更新时刻 */ -}}
+{{- $updatedRaw := "" -}}
+{{- with $site.Params.rss -}}{{- with .updated -}}{{- $updatedRaw = printf "%v" . -}}{{- end -}}{{- end -}}
+{{- $updatedHolder := dict "time" "" -}}
+{{- if $updatedRaw -}}
+  {{- $parsed := try (time.AsTime $updatedRaw) -}}
+  {{- if $parsed.Err -}}
+    {{- $diagnostics = $diagnostics | append (printf "params.rss.updated=%q 无法解析为 RFC3339 时间，已排除" $updatedRaw) -}}
+  {{- else if $parsed.Value.After $now -}}
+    {{- $diagnostics = $diagnostics | append (printf "params.rss.updated=%s 位于未来，已排除" ($parsed.Value.Format "2006-01-02T15:04:05Z07:00")) -}}
+  {{- else -}}
+    {{- $updatedHolder = dict "time" $parsed.Value -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $finalHolder := $maxHolder -}}
+{{- $source := "items" -}}
+{{- $updatedTime := $updatedHolder.time -}}
+{{- if $updatedTime -}}
+  {{- $curMax := $finalHolder.time -}}
+  {{- if or (not $curMax) ($updatedTime.After $curMax) -}}
+    {{- $finalHolder = dict "time" $updatedTime "source" "config" -}}
+    {{- $source = cond (eq $curMax "") "config" "config+items" -}}
+  {{- else -}}
+    {{- $source = "items" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $finalTime := $finalHolder.time -}}
+{{- $display := "" -}}
+{{- $maxItemText := "" -}}
+{{- $maxItemSource := "" -}}
+{{- if $maxHolder.time -}}
+  {{- $maxItemText = $maxHolder.time.Format "2006-01-02T15:04:05Z07:00" -}}
+  {{- $maxItemSource = $maxHolder.source -}}
+{{- end -}}
+{{- if $finalTime -}}
+  {{- $display = $finalTime.Format "Mon, 02 Jan 2006 15:04:05 -0700" -}}
+{{- else -}}
+  {{- $source = "none" -}}
+{{- end -}}
+
+{{- /* 诊断不通过 warnf 发出：本项目 production 构建带 --panicOnWarning，
+       警告会直接让构建失败。诊断改为结构化返回，由 rss.xml 以 XML 注释
+       输出，既能在产物里被测试读到，又不影响构建与读者阅读。 */ -}}
+{{- return (dict
+  "lastBuildDate" $display
+  "source" $source
+  "maxItemTime" $maxItemText
+  "maxItemSource" $maxItemSource
+  "diagnostics" (delimit $diagnostics " | ")
+) -}}

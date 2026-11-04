@@ -1,0 +1,112 @@
+{{- /* ============================================================
+ * 公共摘要文本工具：归一 + 按 Unicode 码点预算安全截断
+ *
+ * 输入 dict:
+ *   text     (string) 原始文本（纯文本或渲染后的 HTML）
+ *   budget   (int)    最大 Unicode 码点数，含追加的省略号
+ *   isHTML   (bool)   true 时先按 HTML 结构去噪再取文本
+ *   strip    (string) "block" 时移除 pre/script/style/table 等整块节点
+ *
+ * 返回 string（纯文本，可能以单个 … 结尾）
+ *
+ * 为什么不用内置 `truncate`（本仓库实测）:
+ *   `"abcdefghij" | truncate 5` → `abcde …`
+ *   内置函数追加的是「空格 + 省略号」两个字符，且把 budget 当作正文上限，
+ *   不符合"为省略号预留 1 码点、最终输出不超过预算"的规格。
+ *
+ * 计数口径:
+ *   `len` 对 string 返回**字节数**；必须用 strings.RuneCount。
+ *   预算按 Unicode 码点计（与技术报告一致），emoji 组合序列会因此占用多个码点。
+ *
+ * 字素簇安全（本文件额外保证）:
+ *   单纯按码点切会把 `👨‍👩‍👧` 切成 `👨‍👩‍` 这种残缺序列。
+ *   截断时回退到最近的"安全边界"：不在 ZWJ、变体选择符、组合附加符、
+ *   肤色修饰符之前下刀，也不在 ZWJ 之后下刀。
+ *   这样 `a👨‍👩‍👧b文中test` 预算 10 会得到 `a👨‍👩‍👧b文中…`（10 码点，完整字素簇）。
+ * ============================================================ */ -}}
+{{- $text := .text | default "" -}}
+{{- $budget := .budget | default 160 | int -}}
+{{- $isHTML := .isHTML | default false -}}
+{{- $strip := .strip | default "none" -}}
+{{- $ELLIPSIS := "…" -}}
+
+{{- if $isHTML -}}
+  {{- /* 按 HTML 结构整块移除噪声节点，再取剩余可读文本。
+        不做"一个跨标签正则搞定结构化提取"的假设：
+        先成对移除整块节点，再处理边界，最后去掉剩余行内标签。
+        行内 <code> 只去标签、保留文字（技术示例必须可读）。 */ -}}
+  {{- if eq $strip "block" -}}
+    {{- range (slice "pre" "script" "style" "table" "iframe" "form" "svg" "noscript" "figure" "video" "audio" "select" "textarea") -}}
+      {{- $tag := . -}}
+      {{- $text = replaceRE (printf `(?is)<%s\b[^>]*>.*?</%s\s*>` $tag $tag) " " $text -}}
+    {{- end -}}
+  {{- end -}}
+  {{- /* 块级边界转空格，避免相邻文字粘连 */ -}}
+  {{- $text = replaceRE `(?i)</(p|div|h[1-6]|li|tr|td|th|blockquote|section|article|header|footer)\s*>` " " $text -}}
+  {{- $text = replaceRE `(?i)<br\s*/?>` " " $text -}}
+  {{- /* 其余标签只去标记，保留文字 */ -}}
+  {{- $text = replaceRE `(?s)<[^>]+>` "" $text -}}
+  {{- /* 实体按解析器语义解码一次，交给输出层再编码 */ -}}
+  {{- $text = $text | htmlUnescape -}}
+{{- end -}}
+
+{{- /* 空白归一 + trim */ -}}
+{{- $text = replaceRE `\s+` " " $text | strings.TrimSpace -}}
+
+{{- /* 移除 Unicode 替换字符 U+FFFD（\uFFFD）。
+       来源：个别历史文章的源文件本身含失效 UTF-8 字节，
+       渲染后变成 U+FFFD。属既有数据问题（已在报告记录），
+       本轮不改写正文，但公开摘要不应把损坏字符展示给订阅者。
+       同时清除其前后可能残留的孤立 Latin-1 乱码片段。 */ -}}
+{{- $text = replaceRE `\x{FFFD}+` "" $text -}}
+{{- $text = replaceRE `\s+` " " $text | strings.TrimSpace -}}
+
+{{- $out := "" -}}
+{{- if gt (strings.RuneCount $text) $budget -}}
+  {{- /* 需要截断：为单个省略号预留 1 码点 */ -}}
+  {{- $limit := sub $budget 1 -}}
+  {{- if lt $limit 0 }}{{ $limit = 0 }}{{ end -}}
+  {{- $runes := split $text "" -}}
+  {{- $total := len $runes -}}
+  {{- if lt $limit $total }}{{ $total = $limit }}{{ end -}}
+
+  {{- /* 回退到安全字素簇边界。
+        boundary(k) 成立 = runes[k] 不是 extend 且 runes[k-1] 不是 ZWJ。
+        从目标长度向前找最近的安全边界，最多回退几个码点，
+        避免把 `👨‍👩‍👧` 切成 `👨‍👩‍` 这种残缺序列。 */ -}}
+  {{- $extendRE := `^[\x{200D}\x{FE00}-\x{FE0F}\x{1F3FB}-\x{1F3FF}\x{0300}-\x{036F}\x{20D0}-\x{20F0}\x{1AB0}-\x{1AFF}\x{1DC0}-\x{1DFF}\x{FE20}-\x{FE2F}]$` -}}
+  {{- $safe := $limit -}}
+  {{- $stop := false -}}
+  {{- range (seq 1 12) -}}
+    {{- if and (not $stop) (gt $safe 0) -}}
+      {{- $cur := index $runes $safe | default "" -}}
+      {{- $prev := index $runes (sub $safe 1) | default "" -}}
+      {{- $curIsExtend := gt (len (findRE $extendRE $cur)) 0 -}}
+      {{- $prevIsZWJ := eq $prev "\u200D" -}}
+      {{- if or $curIsExtend $prevIsZWJ -}}
+        {{- $safe = int (sub $safe 1) -}}
+      {{- else -}}
+        {{- $stop = true -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if lt $safe 0 }}{{ $safe = 0 }}{{ end -}}
+
+  {{- $acc := "" -}}
+  {{- $n := 0 -}}
+  {{- range $i, $ch := $runes -}}
+    {{- if lt $i $safe -}}
+      {{- $acc = printf "%s%s" $acc $ch -}}
+      {{- $n = add $n 1 -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $acc = replaceRE `\s+` " " $acc | strings.TrimSpace -}}
+  {{- if $acc -}}
+    {{- $out = printf "%s%s" $acc $ELLIPSIS -}}
+  {{- else -}}
+    {{- $out = $ELLIPSIS -}}
+  {{- end -}}
+{{- else -}}
+  {{- $out = $text -}}
+{{- end -}}
+{{- return $out -}}

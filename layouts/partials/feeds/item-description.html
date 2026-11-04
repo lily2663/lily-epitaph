@@ -1,0 +1,60 @@
+{{- /* ============================================================
+ * RSS item 摘要：候选顺序 + 240 码点预算 + 双层编码
+ *
+ * 输入 dict:
+ *   page (Page)
+ *
+ * 返回 string：**已为 RSS 输出编码好的内容**
+ *
+ * 候选顺序（保护判断最优先）:
+ *   1. 受保护文章 → 固定公开提示（不读取 description/summary/正文）
+ *   2. 显式 description
+ *   3. 显式 summary
+ *   4. 公开渲染内容提取（剔除 pre/script/style/table 等块）
+ *   5. 固定提示
+ *
+ * 编码语义（文档 5.3 的三层验收，本仓库实测）:
+ *   Hugo 对 {{ }} 插值会自动做 XML 转义。RSS <description> 在阅读器中
+ *   通常按 HTML 呈现，因此要让技术文本「只显示为文字」必须：
+ *     纯文本 --htmlEscape--> HTML 安全文本 --(Hugo 自动 XML 转义)--> XML
+ *   XML 解析后得到 HTML 安全文本；阅读器渲染后显示原文且不执行标签。
+ *   不能用 safeHTML 跳过第二层，那样 `A&B` 会破坏 XML 或让标签可执行。
+ *
+ * 预算:
+ *   240 个 Unicode 码点，**包含**追加的省略号；仅在实际截断时追加一个 …。
+ *   该预算是本站订阅可读性选择，不是 RSS 规范要求。
+ * ============================================================ */ -}}
+{{- $page := .page -}}
+{{- $budget := 240 -}}
+{{- $emptyText := "这篇文章暂无摘要，请打开原文阅读。" -}}
+{{- $lockText := "该文章已加密，需访问网站输入密码查看。" -}}
+
+{{- $protected := false -}}
+{{- with $page.Params.protected -}}{{- $protected = . -}}{{- end -}}
+
+{{- $plain := "" -}}
+{{- if $protected -}}
+  {{- $plain = $lockText -}}
+{{- else -}}
+  {{- /* 显式 description / summary 是纯文本，不做 plainify：
+        plainify 会把技术示例中的 <script> 当作标签删除。 */ -}}
+  {{- $explicit := $page.Description | default "" | replaceRE `\s+` " " | strings.TrimSpace -}}
+  {{- if $explicit -}}
+    {{- $plain = partial "seo/text-budget.html" (dict "text" $explicit "budget" $budget) -}}
+  {{- else -}}
+    {{- $summary := $page.Params.summary | default "" | replaceRE `\s+` " " | strings.TrimSpace -}}
+    {{- if $summary -}}
+      {{- $plain = partial "seo/text-budget.html" (dict "text" $summary "budget" $budget) -}}
+    {{- else -}}
+      {{- $auto := partial "seo/text-budget.html" (dict "text" $page.Content "isHTML" true "strip" "block" "budget" $budget) -}}
+      {{- if $auto -}}
+        {{- $plain = $auto -}}
+      {{- else -}}
+        {{- $plain = $emptyText -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 第一层：HTML 转义。第二层由 Hugo 在 XML 上下文自动完成。 */ -}}
+{{- return ($plain | htmlEscape) -}}

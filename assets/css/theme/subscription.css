@@ -1,0 +1,281 @@
+/* =========================================================
+ * /subscribe/ 局部样式
+ *
+ * 作用域铁律（文档 5.6 / Q4）：
+ *   - 所有规则必须挂在 .subscription-page 之下，不出现裸
+ *     article / header / h1 / main / body / :root 选择器。
+ *   - 不改 .article / .article-body / .article-title / --readw / 站点背景。
+ *   - 复用既有变量（--ink --muted --bg-card --border --mint --radius）。
+ *   - 不用 !important，不引入新配色体系。
+ * ========================================================= */
+
+.subscription-page {
+  max-width: var(--readw);
+  margin: 0 auto;
+  padding: 8px 0 48px;
+}
+
+/* 页面头部与归档页保持同一可读性处理：
+   复用既有卡片底色 + 圆角 + 边框，而不是引入新的"文字压图"方案。
+   仅作用于 .subscription-page 之下，不影响其他页面。 */
+.subscription-page__head {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px 24px 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.subscription-page__title {
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.2;
+  margin: 12px 0 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.subscription-page__lead {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.subscription-page__block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.subscription-page__heading {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.subscription-page__note {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 16px;
+}
+
+.subscription-page__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.subscription-page__address {
+  flex: 1 1 320px;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.subscription-page__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-family: var(--sans);
+  color: var(--bg-card);
+  background: var(--mint);
+  border: 1px solid var(--mint);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.subscription-page__button:hover,
+.subscription-page__button:focus-visible {
+  background: var(--mint-dark);
+  border-color: var(--mint-dark);
+  color: var(--bg-card);
+}
+
+.subscription-page__button--ghost {
+  color: var(--ink);
+  background: transparent;
+  border-color: var(--border);
+}
+
+.subscription-page__button--ghost:hover,
+.subscription-page__button--ghost:focus-visible {
+  color: var(--ink);
+  background: var(--bg-hover);
+  border-color: var(--mint);
+}
+
+.subscription-page__status {
+  margin: 10px 0 0;
+  min-height: 1.4em;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.subscription-page__tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.subscription-page__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 14px;
+}
+
+.subscription-page__tag-link {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.subscription-page__tag-link:hover,
+.subscription-page__tag-link:focus-visible {
+  color: var(--mint-dark);
+  border-bottom-color: var(--mint);
+}
+
+.subscription-page__count {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.subscription-page__tag-feed {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--mint-dark);
+  text-decoration: none;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.subscription-page__tag-feed:hover,
+.subscription-page__tag-feed:focus-visible {
+  color: var(--bg-card);
+  background: var(--mint);
+  border-color: var(--mint);
+}
+
+.subscription-page__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.subscription-page__item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.subscription-page__item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.subscription-page__item-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.subscription-page__item-link:hover .subscription-page__item-title,
+.subscription-page__item-link:focus-visible .subscription-page__item-title {
+  color: var(--mint-dark);
+}
+
+.subscription-page__item-title {
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  transition: color 0.2s ease;
+}
+
+.subscription-page__item-date {
+  flex: 0 0 auto;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 键盘焦点必须可见（保留既有可访问性能力） */
+.subscription-page__address:focus-visible,
+.subscription-page__button:focus-visible,
+.subscription-page__tag-feed:focus-visible,
+.subscription-page__item-link:focus-visible {
+  outline: 2px solid var(--mint-dark);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .subscription-page {
+    padding-bottom: 32px;
+  }
+  .subscription-page__head,
+  .subscription-page__block {
+    padding: 18px;
+    border-radius: var(--radius);
+  }
+  .subscription-page__row {
+    gap: 8px;
+  }
+  .subscription-page__address {
+    flex: 1 1 100%;
+    font-size: 12px;
+  }
+  .subscription-page__button {
+    flex: 1 1 auto;
+  }
+  .subscription-page__item-link {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subscription-page * {
+    transition: none;
+  }
+}

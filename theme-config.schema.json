@@ -86,6 +86,11 @@
     {"id":"footer","label":"页脚","fields":[
       {"path":"params.footer.copyright","label":"版权文字","type":"string"},
       {"path":"params.footer.note","label":"说明文字","type":"string"}
+    ]},
+    {"id":"share","label":"分享与订阅","fields":[
+      {"path":"params.shareImage","label":"站点默认分享图","type":"url","help":"1200×630 的 PNG/JPG 公开路径（如 /share/lily-house.png）。未给文章单独设置 shareImage 时使用；留空则回退头像。图片放在 assets/share/ 下，Hugo 会发布到 /share/。"},
+      {"path":"params.rss.updated","label":"RSS 内容更新时间","type":"string","help":"RFC3339 时间文本（如 2026-10-29T01:00:00+08:00）。仅当 RSS 模板或摘要策略真实变更时手动更新一次；普通保存设置或重建站点时不要改它，否则会把无关操作伪装成订阅内容更新。"},
+      {"path":"services.rss.limit","label":"RSS 条目数量上限","type":"number","default":0,"min":0,"max":100,"step":1,"help":"0 表示不限制。该值直接控制 index.xml 与标签订阅的条目数。"}
     ]}
   ]
 }

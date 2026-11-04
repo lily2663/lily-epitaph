@@ -1,7 +1,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {{- $isArticle := and .IsPage (eq .Section "posts") -}}
+{{- /* term 页的标题可能是非确定性的：同一标签存在不同大小写写法时，
+      Hugo 会在两者间摇摆（实测 tags/wp 在 WP 与 Wp 之间变化）。
+      用确定性规则派生的显示名覆盖它，保证重复构建一致。 */ -}}
 {{- $pageTitle := cond .IsHome .Site.Title .Title -}}
+{{- with partial "seo/term-title.html" (dict "page" .) -}}{{- $pageTitle = . -}}{{- end -}}
 {{- $pageURL := .Permalink -}}
 {{- /* Read the pager prepared by the list module; calling .Paginator here
       would freeze the unfiltered collection before module settings apply. */ -}}
@@ -9,16 +13,10 @@
   {{- $pageURL = .URL | absURL -}}
   {{- if gt .PageNumber 1 }}{{ $pageTitle = printf "%s · 第 %d 页" $pageTitle .PageNumber }}{{ end -}}
 {{- end -}}
-{{- $description := .Description | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
-{{- if not $description -}}
-  {{- $description = .Params.summary | default "" | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
-{{- end -}}
-{{- /* Only public articles may derive metadata from their rendered summary. */ -}}
-{{- if and (not $description) $isArticle (not .Params.protected) -}}
-  {{- $summary := .Summary | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
-  {{- $description = printf "%.160s" $summary -}}
-  {{- if ne $description $summary }}{{ $description = printf "%s…" $description }}{{ end -}}
-{{- end -}}
+{{- /* 描述走唯一事实来源：保护判断先于任何正文/摘要访问。
+       auto-body 回退的 160 码点预算在 seo/description.html 内统一处理。 */ -}}
+{{- $descriptionResult := partial "seo/description.html" . -}}
+{{- $description := $descriptionResult.text -}}
 {{- if not $description -}}
   {{- $description = .Site.Params.description | default .Site.Title | plainify | replaceRE `\s+` " " | strings.TrimSpace -}}
 {{- end -}}
@@ -32,19 +30,35 @@
 <link rel="alternate" type="application/rss+xml" title="{{ $.Site.Title }}" href="{{ .Permalink }}">
 {{- end }}
 <title>{{ $pageTitle }}{{ if not .IsHome }} · {{ .Site.Title }}{{ end }}</title>
-{{- $cover := .Params.cover | default .Site.Params.avatar -}}
+{{- /* 分享图走唯一解析 partial：文章 shareImage → cover → 站点 shareImage → 头像。
+      受保护页面不读取文章专用图，避免未审阅素材外泄。
+      尺寸只在真实读到本站资源元数据时输出，未知时不伪造。 */ -}}
+{{- $share := partial "seo/share-image.html" (dict "page" . "site" .Site) -}}
+{{- $shareURL := $share.url -}}
 <meta property="og:type" content="{{ if $isArticle }}article{{ else }}website{{ end }}">
 <meta property="og:site_name" content="{{ .Site.Title }}">
 <meta property="og:title" content="{{ $pageTitle }}">
 <meta property="og:description" content="{{ $description }}">
 <meta property="og:url" content="{{ $pageURL }}">
-<meta property="og:image" content="{{ $cover | absURL }}">
+{{- with $shareURL }}
+<meta property="og:image" content="{{ . }}">
+{{- if gt $share.width 0 }}<meta property="og:image:width" content="{{ $share.width }}"><meta property="og:image:height" content="{{ $share.height }}">{{ end }}
+{{- with $share.mime }}<meta property="og:image:type" content="{{ . }}">{{ end }}
+{{- /* Hugo minify 会在某些情况下把属性值改写为单引号并解码实体，
+       此时值里的 > 或 ' 会截断标签、产出非法 HTML（实测：标题含 <tag> 时被截断）。
+       分享图的 alt 只需「能被读屏朗读的页面名」，因此移除会破坏属性的字符，
+       而不是依赖转义层去猜 minify 行为。 */ -}}
+{{- $altSafe := $pageTitle | replaceRE `[<>"']` "" -}}
+<meta property="og:image:alt" content="{{ $altSafe }}">
+{{- end }}
 <meta property="og:locale" content="zh_CN">
 {{ if $isArticle }}<meta property="article:published_time" content="{{ .PublishDate.Format "2006-01-02T15:04:05Z07:00" }}"><meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">{{ end }}
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="{{ $share.cardType }}">
 <meta name="twitter:title" content="{{ $pageTitle }}">
 <meta name="twitter:description" content="{{ $description }}">
-<meta name="twitter:image" content="{{ $cover | absURL }}">
+{{- with $shareURL }}
+<meta name="twitter:image" content="{{ . }}">
+{{- end }}
 {{ partial "site-icon.html" . }}
 {{- if .Site.Params.theme.webFonts -}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,6 +80,7 @@
   "css/theme/welcome.css"
   "css/theme/pet.css"
   "css/theme/comments.css"
+  "css/theme/subscription.css"
 -}}
 {{- $themeCss := slice -}}
 {{- range $themeStyles -}}{{- with resources.Get . -}}{{- $themeCss = $themeCss | append . -}}{{- end -}}{{- end -}}
@@ -147,8 +162,10 @@
 {{- with .Site.Params.features }}{{ if isset . "viewTransition" }}{{ $viewTransitions = .viewTransition }}{{ end }}{{ end -}}
 {{ if not $viewTransitions }}<style>@view-transition { navigation: none; }</style>{{ end }}
 {{- $schema := dict "@context" "https://schema.org" "@type" (cond $isArticle "BlogPosting" (cond .IsHome "WebSite" "WebPage")) "name" $pageTitle "description" $description "url" $pageURL "inLanguage" .Site.Language.Lang -}}
+{{- with $shareURL }}{{ $schema = merge $schema (dict "image" .) }}{{ end -}}
 {{- if $isArticle -}}
-  {{- $schema = merge $schema (dict "headline" .Title "datePublished" (.PublishDate.Format "2006-01-02T15:04:05Z07:00") "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00") "image" ($cover | absURL) "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink) "author" (dict "@type" "Person" "name" .Site.Params.author) "publisher" (dict "@type" "Organization" "name" .Site.Title)) -}}
+  {{- $articleSchema := dict "headline" .Title "datePublished" (.PublishDate.Format "2006-01-02T15:04:05Z07:00") "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00") "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink) "author" (dict "@type" "Person" "name" .Site.Params.author) "publisher" (dict "@type" "Organization" "name" .Site.Title) -}}
+  {{- $schema = merge $schema $articleSchema -}}
 {{- end -}}
 <script type="application/ld+json">{{ $schema | jsonify | safeJS }}</script>
 {{- /* Keep print overrides after every screen stylesheet and inline theme value. */ -}}

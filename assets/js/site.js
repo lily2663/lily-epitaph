@@ -5,6 +5,7 @@ import { installPjaxNavigation } from './features/pjax.js';
 import { createPostSearch } from './features/search.js';
 import { installOfflineCache } from './features/offline.js';
 import { setupDrawerPagination } from './features/drawers.js';
+import { installSubscriptionCopy } from './features/subscription.js';
 
 (() => {
   'use strict';
@@ -103,6 +104,10 @@ import { setupDrawerPagination } from './features/drawers.js';
   const { flashFade } = installPjaxNavigation({ initPage, updateScroll });
 
   installOfflineCache();
+
+  // 一次性安装 document 级委托监听：订阅页复制按钮。
+  // 装在 initPage 之外，PJAX 反复进入/离开不会叠加监听。
+  installSubscriptionCopy();
 
   initPage();
   flashFade();

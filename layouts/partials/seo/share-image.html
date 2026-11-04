@@ -1,0 +1,112 @@
+{{- /* ============================================================
+ * 分享图解析（唯一事实来源）
+ *
+ * 输入 dict:
+ *   page   (Page)
+ *   site   (Site)
+ *
+ * 返回 dict:
+ *   url        (string) 绝对 URL；无可用候选时为空
+ *   source     (string) articleShare | cover | siteShare | avatar | none
+ *   width      (int)    仅当能真实读到时给出，否则 0
+ *   height     (int)    同上
+ *   mime       (string) 仅当能确定时给出
+ *   cardType   (string) summary_large_image | summary
+ *
+ * 公开图片选择顺序（文档 10.2）:
+ *   文章 shareImage → 文章 cover → 站点 params.shareImage → 头像
+ * 普通公开页面:
+ *   站点 params.shareImage → 头像
+ * 受保护页面:
+ *   站点 params.shareImage → 头像
+ *   （不读取文章 shareImage/cover，避免未审阅的专用图外泄）
+ *
+ * 空字符串按未设置处理。拒绝 javascript:/file:/data:/磁盘路径。
+ * 尺寸只在真的读到本站资源元数据时给出；未知尺寸不伪造
+ * （绝不把头像标成 1200×630）。
+ * ============================================================ */ -}}
+{{- $page := .page -}}
+{{- $site := .site -}}
+
+{{- $isProtected := false -}}
+{{- with $page.Params.protected -}}{{- $isProtected = . -}}{{- end -}}
+
+{{- $candidates := slice -}}
+{{- if and (not $isProtected) $page.IsPage (eq $page.Section "posts") -}}
+  {{- with $page.Params.shareImage -}}{{- $candidates = $candidates | append (dict "value" . "source" "articleShare") -}}{{- end -}}
+  {{- with $page.Params.cover -}}{{- $candidates = $candidates | append (dict "value" . "source" "cover") -}}{{- end -}}
+{{- end -}}
+{{- with $site.Params.shareImage -}}{{- $candidates = $candidates | append (dict "value" . "source" "siteShare") -}}{{- end -}}
+{{- with $site.Params.avatar -}}{{- $candidates = $candidates | append (dict "value" . "source" "avatar") -}}{{- end -}}
+
+{{- $chosen := "" -}}
+{{- $chosenSource := "none" -}}
+{{- $rejected := slice -}}
+{{- range $candidates -}}
+  {{- if not $chosen -}}
+    {{- $raw := printf "%v" .value | strings.TrimSpace -}}
+    {{- if $raw -}}
+      {{- /* 协议白名单：只接受站内绝对路径或 http(s) */ -}}
+      {{- $lower := lower $raw -}}
+      {{- $isBad := or (hasPrefix $lower "javascript:") (hasPrefix $lower "file:") (hasPrefix $lower "data:") (hasPrefix $lower "vbscript:") -}}
+      {{- $isRemote := or (hasPrefix $lower "http://") (hasPrefix $lower "https://") -}}
+      {{- $isLocal := hasPrefix $raw "/" -}}
+      {{- if and (not $isBad) (or $isRemote $isLocal) -}}
+        {{- $chosen = $raw -}}
+        {{- $chosenSource = .source -}}
+      {{- else -}}
+        {{- /* 不能用 warnf：production 构建带 --panicOnWarning，一个非法图片值
+               会中断整站构建。非法值不进输出，只记录在返回值里供测试与报告读取。 */ -}}
+        {{- $rejected = $rejected | append (printf "%s=%q(source=%s)" .source $raw .source) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $url := "" -}}
+{{- $width := 0 -}}
+{{- $height := 0 -}}
+{{- $mime := "" -}}
+
+{{- if $chosen -}}
+  {{- if or (hasPrefix (lower $chosen) "http://") (hasPrefix (lower $chosen) "https://") -}}
+    {{- /* 远程图：保留原 URL，不下载、不代理、不替换，尺寸按未知处理 */ -}}
+    {{- $url = $chosen -}}
+  {{- else -}}
+    {{- $url = $chosen | absURL -}}
+    {{- /* 本站资源：只有真的能读到图片元数据时才输出尺寸。
+           站点分享图放在 assets/share/ 下（Hugo 会一并发布到 public/share/），
+           这样 resources.Get 能读到真实宽高；static/ 下的文件读不到尺寸，
+           此时保持"未知"，不伪造 1200×630。 */ -}}
+    {{- $rel := strings.TrimPrefix "/" $chosen -}}
+    {{- with resources.Get $rel -}}
+      {{- if eq .ResourceType "image" -}}
+        {{- $width = .Width -}}
+        {{- $height = .Height -}}
+        {{- $mime = .MediaType.Type -}}
+        {{- /* Hugo 只发布"被引用"的 assets 资源。分享图不进 HTML 标签，
+               因此必须显式发布一次，否则元数据指向 404。
+               Publish 对同一资源是幂等的，重复调用不会产生多份文件。 */ -}}
+        {{- .Publish -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* twitter card：只有确认是横向大图（且尺寸已知或明确为 1200x630 设计图）才用大卡 */ -}}
+{{- $cardType := "summary" -}}
+{{- if and $url (or (eq $width 0) (ge $width $height)) -}}
+  {{- if ne $chosenSource "avatar" -}}
+    {{- $cardType = "summary_large_image" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return (dict
+  "url" $url
+  "source" $chosenSource
+  "width" $width
+  "height" $height
+  "mime" $mime
+  "cardType" $cardType
+  "rejected" (delimit $rejected "; ")
+) -}}

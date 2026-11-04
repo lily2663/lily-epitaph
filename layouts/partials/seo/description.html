@@ -1,0 +1,59 @@
+{{- /* ============================================================
+ * 公开描述唯一事实来源（single source of truth）
+ *
+ * 输入: 页面对象（Page）
+ * 返回: dict
+ *   text     (string) 已定稿的纯文本描述（显式值不截断；自动回退受预算约束）
+ *   source   (string) explicit-description | summary | auto-body | protected | empty
+ *   budgeted (bool)   true 表示应用了自动回退预算
+ *   budget   (int)    实际应用的预算（0 表示未截断）
+ *
+ * 优先级（第一步永远是保护判断，早于任何 .Content/.Plain/.Summary 访问）:
+ *   1. 受保护文章 → 固定公开锁定提示（忽略显式 description/summary）
+ *   2. 非空显式 .Description（不截断）
+ *   3. 非空显式 summary
+ *   4. 仅公开文章：从渲染内容剔除块级噪声后提取正文摘要（160 码点预算）
+ *   5. 空字符串（由调用方决定站点级回退）
+ *
+ * 说明：
+ *   - 该 partial 只负责"描述"，不改变卡片 summary、不改搜索排序、不改 PJAX。
+ *   - 自动回退走 seo/text-budget.html，避免多处各写一套截断规则。
+ * ============================================================ */ -}}
+{{- $page := . -}}
+{{- $metaBudget := 160 -}}
+{{- $lockText := "该文章已加密，需访问网站输入密码查看。" -}}
+
+{{- $isArticle := and $page.IsPage (eq $page.Section "posts") -}}
+{{- $isProtected := false -}}
+{{- with $page.Params.protected -}}{{- $isProtected = . -}}{{- end -}}
+
+{{- $result := dict "text" "" "source" "empty" "budgeted" false "budget" 0 -}}
+{{- $owner := "seo/text-budget.html" -}}
+
+{{- if $isProtected -}}
+  {{- /* 保护优先：不读取 .Content / .Plain / .Summary / description / summary */ -}}
+  {{- $result = dict "text" $lockText "source" "protected" "budgeted" false "budget" 0 -}}
+{{- else -}}
+  {{- /* 1) 显式 description：归一空白，完整保留。
+        注意：显式 description 是**纯文本**，不能走 plainify ——
+        plainify 会把它当 HTML 解析，把 `A&B <script>x</script>` 里的
+        技术示例当成标签删掉。只做空白归一。 */ -}}
+  {{- $explicit := $page.Description | default "" | replaceRE `\s+` " " | strings.TrimSpace -}}
+  {{- if $explicit -}}
+    {{- $result = dict "text" $explicit "source" "explicit-description" "budgeted" false "budget" 0 -}}
+  {{- else -}}
+    {{- /* 2) 显式 summary：同样是纯文本，不做 plainify */ -}}
+    {{- $summary := $page.Params.summary | default "" | replaceRE `\s+` " " | strings.TrimSpace -}}
+    {{- if $summary -}}
+      {{- $result = dict "text" $summary "source" "summary" "budgeted" false "budget" 0 -}}
+    {{- else if $isArticle -}}
+      {{- /* 3) 仅公开文章：从渲染内容提取，剔除 pre/table/script 等块 */ -}}
+      {{- $auto := partial $owner (dict "text" $page.Content "isHTML" true "strip" "block" "budget" $metaBudget) -}}
+      {{- if $auto -}}
+        {{- $result = dict "text" $auto "source" "auto-body" "budgeted" true "budget" $metaBudget -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return $result -}}

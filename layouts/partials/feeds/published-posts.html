@@ -1,0 +1,43 @@
+{{- /* ============================================================
+ * 公开文章集合：RSS 与订阅页共用的唯一筛选/排序来源
+ *
+ * 输入 dict:
+ *   pages  (Pages)  候选集合（首页传 site.RegularPages，term/section 传上下文 RegularPages）
+ *   limit  (int)    可选。<=0 表示不限
+ *   section(string) 可选。默认 "posts"；传入空字符串表示不按 section 过滤
+ *
+ * 输出 Pages（已过滤 + 稳定排序）
+ *
+ * 四个过滤条件（与文档 F1-01 一致，缺一不可）:
+ *   1. Section == posts
+ *   2. Draft == false
+ *   3. PublishDate <= now
+ *   4. Date <= now
+ *
+ * 排序：
+ *   PublishDate 降序；同一发布时间用 permalink 升序作稳定次级键。
+ *   仓库当前无文章显式设置 publishDate（见 f1-date-audit.json），
+ *   因此 PublishDate 语义等同 Date，迁移风险为零。
+ *   Hugo 的 ByDate/ByPublishDate 不保证同值稳定，所以这里显式排两次。
+ *
+ * 说明：
+ *   本 partial 只服务 RSS 与订阅页，不改归档、首页、搜索。
+ * ============================================================ */ -}}
+{{- $pages := .pages -}}
+{{- $section := "posts" -}}
+{{- if isset . "section" -}}{{- $section = .section -}}{{- end -}}
+{{- $limit := .limit | default 0 | int -}}
+
+{{- $out := $pages -}}
+{{- if $section -}}{{- $out = where $out "Section" $section -}}{{- end -}}
+{{- $out = where $out "Draft" false -}}
+{{- $out = where $out "PublishDate" "le" now -}}
+{{- $out = where $out "Date" "le" now -}}
+
+{{- /* 稳定排序：先按 permalink 升序，再按 PublishDate 降序。
+       Hugo 的排序是稳定排序，因此同发布时间会保留 permalink 升序。 */ -}}
+{{- $out = sort $out "Permalink" -}}
+{{- $out = sort $out "PublishDate" "desc" -}}
+
+{{- if ge $limit 1 -}}{{- $out = first $limit $out -}}{{- end -}}
+{{- return $out -}}

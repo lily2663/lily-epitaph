@@ -2,14 +2,17 @@
 {{ with .Page }}
 {{- $archive := site.GetPage "/archives" -}}
 {{- $rss := site.Home.OutputFormats.Get "RSS" -}}
+{{- $subscribePage := site.GetPage "/subscribe" -}}
 {{- $showArchives := and (ne $config.showArchives false) $archive -}}
 {{- $showRSS := and (ne $config.showRSS false) $rss -}}
+{{- $showSubscribe := and (ne $config.showRSS false) $subscribePage -}}
 <footer class="site-footer">
   <div class="container">
-    {{ if or $showArchives $showRSS }}
+    {{ if or $showArchives $showRSS $showSubscribe }}
     <nav class="site-footer__discovery" aria-label="继续阅读与订阅">
       {{ if $showArchives }}<a href="{{ $archive.RelPermalink }}">文章归档</a>{{ end }}
       {{ if $showRSS }}<a href="{{ $rss.RelPermalink }}" type="application/rss+xml" data-no-pjax>RSS 订阅</a>{{ end }}
+      {{ if $showSubscribe }}<a href="{{ $subscribePage.RelPermalink }}">订阅说明</a>{{ end }}
     </nav>
     {{ end }}
     {{ if ne $config.showCopyright false }}<p>© {{ now.Year }} {{ .Site.Title }}{{ with .Site.Params.footer.copyright }} · {{ . }}{{ end }}</p>{{ end }}

@@ -1,0 +1,95 @@
+{{- /* ============================================================
+ * /subscribe/ — 普通 HTML 订阅说明页
+ *
+ * 约束（文档 5.6 / Q4）：
+ *   1. 只定义 main，继承现有 baseof：不复制另一套全站 HTML、
+ *      不另写主题切换器、不重复实现导航/页脚/背景/移动工具栏。
+ *   2. 最外层是 section.subscription-page，**不用 .article 伪装文章**。
+ *   3. 不新增顶部主导航项；页脚另有指向本页的入口。
+ *   4. RSS 集合与 __index.xml 共用 feeds/published-posts.html，避免两套筛选。
+ *   5. 标签订阅来自真实 term 页面及其 RSS OutputFormat，不猜 URL。
+ *   6. XML 链接一律 data-no-pjax（保持原生导航）。
+ *   7. 复制是渐进增强：地址本身始终可见可选中。
+ * ============================================================ */ -}}
+{{ define "main" }}
+{{- $homeFeed := site.Home.OutputFormats.Get "RSS" -}}
+{{- $limit := site.Config.Services.RSS.Limit -}}
+{{- $recent := partial "feeds/published-posts.html" (dict "pages" site.RegularPages "limit" (cond (ge $limit 1) $limit 10)) -}}
+
+{{- /* 真实有 RSS 输出且含公开文章的标签 */ -}}
+{{- $tagFeeds := slice -}}
+{{- range site.Taxonomies.tags -}}
+  {{- $term := .Page -}}
+  {{- $termFeed := $term.OutputFormats.Get "RSS" -}}
+  {{- if $termFeed -}}
+    {{- $public := partial "feeds/published-posts.html" (dict "pages" $term.RegularPages) -}}
+    {{- if gt (len $public) 0 -}}
+      {{- $tagFeeds = $tagFeeds | append (dict "title" $term.Title "link" $term.RelPermalink "feed" $termFeed.RelPermalink "count" (len $public)) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+<section class="subscription-page" data-subscription-page aria-labelledby="subscription-title">
+  <header class="subscription-page__head">
+    <p class="kicker">SUBSCRIBE · 订阅</p>
+    <h1 class="subscription-page__title" id="subscription-title">{{ .Title }}</h1>
+    <p class="subscription-page__lead">{{ .Description }}</p>
+  </header>
+
+  {{- if $homeFeed }}
+  <section class="subscription-page__block" aria-labelledby="subscription-all">
+    <h2 class="subscription-page__heading" id="subscription-all">全站订阅</h2>
+    <p class="subscription-page__note">摘要订阅：阅读器里显示文章标题、链接与简短摘要，完整内容请打开原文。</p>
+    <div class="subscription-page__row">
+      <code class="subscription-page__address" id="subscription-feed-url">{{ $homeFeed.Permalink }}</code>
+      <button
+        type="button"
+        class="subscription-page__button"
+        data-subscription-copy="subscription-feed-url"
+        aria-describedby="subscription-copy-status">复制地址</button>
+      <a class="subscription-page__button subscription-page__button--ghost"
+         href="{{ $homeFeed.RelPermalink }}" type="application/rss+xml" data-no-pjax>打开 XML</a>
+    </div>
+    <p class="subscription-page__status" id="subscription-copy-status" role="status" aria-live="polite"></p>
+  </section>
+  {{- else }}
+  <section class="subscription-page__block" aria-labelledby="subscription-off">
+    <h2 class="subscription-page__heading" id="subscription-off">当前未提供订阅</h2>
+    <p class="subscription-page__note">本站目前关闭了 RSS 输出，因此没有可用的订阅地址。</p>
+  </section>
+  {{- end }}
+
+  {{- if $tagFeeds }}
+  <section class="subscription-page__block" aria-labelledby="subscription-tags">
+    <h2 class="subscription-page__heading" id="subscription-tags">按标签订阅</h2>
+    <p class="subscription-page__note">只列出确实有已发布文章的标签。</p>
+    <ul class="subscription-page__tags">
+      {{- range $tagFeeds }}
+      <li class="subscription-page__tag">
+        <a class="subscription-page__tag-link" href="{{ .link }}">{{ .title }}</a>
+        <span class="subscription-page__count">{{ .count }} 篇</span>
+        <a class="subscription-page__tag-feed" href="{{ .feed }}" type="application/rss+xml" data-no-pjax aria-label="订阅标签 {{ .title }}">RSS</a>
+      </li>
+      {{- end }}
+    </ul>
+  </section>
+  {{- end }}
+
+  {{- if $recent }}
+  <section class="subscription-page__block" aria-labelledby="subscription-recent">
+    <h2 class="subscription-page__heading" id="subscription-recent">最近文章</h2>
+    <ol class="subscription-page__list">
+      {{- range $recent }}
+      <li class="subscription-page__item">
+        <a class="subscription-page__item-link" href="{{ .RelPermalink }}">
+          <span class="subscription-page__item-title">{{ .Title }}</span>
+          <time class="subscription-page__item-date" datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006年1月2日" }}</time>
+        </a>
+        {{- if .Params.protected }}<span class="lock-chip">加密</span>{{ end }}
+      </li>
+      {{- end }}
+    </ol>
+  </section>
+  {{- end }}
+</section>
+{{ end }}
